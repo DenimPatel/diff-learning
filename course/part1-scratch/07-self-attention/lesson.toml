@@ -1,0 +1,17 @@
+title = "Self-attention"
+parent = "06-position-and-mlp"
+summary = "Each position asks a question (query), the past offers answers (keys, values). The model can finally read its context."
+tags = ["attention", "transformer"]
+updated = 2026-09-24
+
+[[references]]
+title = "Attention Is All You Need (Vaswani et al., 2017)"
+url = "https://arxiv.org/abs/1706.03762"
+[[references]]
+title = "The Illustrated Transformer (Jay Alammar)"
+url = "https://jalammar.github.io/illustrated-transformer/"
+
+[[experiments]]
+name = "More steps"
+description = "Attention needs a while to pay off. Try 400 steps (slow in pure Python!)."
+params = { num_steps = 400 }

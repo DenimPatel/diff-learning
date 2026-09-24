@@ -1,0 +1,21 @@
+title = "Adam optimizer"
+parent = "04-bigram-model"
+summary = "Momentum + per-parameter step sizes: the optimizer nearly every LLM trains with."
+tags = ["optimization", "adam"]
+updated = 2026-09-24
+
+[[references]]
+title = "Adam: A Method for Stochastic Optimization (Kingma & Ba, 2014)"
+url = "https://arxiv.org/abs/1412.6980"
+[[references]]
+title = "Why Momentum Really Works (Distill)"
+url = "https://distill.pub/2017/momentum/"
+
+[[experiments]]
+name = "No momentum"
+description = "beta1 = 0: Adam without momentum (close to RMSProp)."
+params = { beta1 = 0.0 }
+[[experiments]]
+name = "lr 0.1"
+description = "Too aggressive even for Adam."
+params = { learning_rate = 0.1 }

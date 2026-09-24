@@ -1,0 +1,2 @@
+title = "Part 1 · From scratch"
+summary = "An empty file becomes microgpt: data, autograd, a loss, an optimizer, attention and a transformer block, all in pure Python with no dependencies. Every number is a Python object you can inspect. It's slow, but nothing is hidden."

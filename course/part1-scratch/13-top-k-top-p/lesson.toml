@@ -1,0 +1,22 @@
+title = "Top-k & top-p sampling"
+parent = "10-microgpt"
+variant = true
+summary = "Cut off the unlikely tail of the distribution before sampling."
+tags = ["sampling", "inference"]
+updated = 2026-09-24
+
+[[references]]
+title = "The Curious Case of Neural Text Degeneration (nucleus / top-p, Holtzman et al., 2019)"
+url = "https://arxiv.org/abs/1904.09751"
+[[references]]
+title = "Hierarchical Neural Story Generation (top-k, Fan et al., 2018)"
+url = "https://arxiv.org/abs/1805.04833"
+
+[[experiments]]
+name = "Greedy"
+description = "top_k = 1: always the single most likely character. Every sample is the same!"
+params = { top_k = 1 }
+[[experiments]]
+name = "Hot but safe"
+description = "High temperature, but top-p trims the nonsense."
+params = { temperature = 1.5, top_p = 0.7, top_k = 27 }

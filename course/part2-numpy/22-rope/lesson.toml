@@ -1,0 +1,18 @@
+title = "RoPE: rotary position embeddings"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Encode position by rotating queries and keys, so attention sees relative distance. Used by Llama, Qwen, Mistral, DeepSeek and others."
+tags = ["position", "attention", "rope"]
+updated = 2026-09-24
+
+[[references]]
+title = "RoFormer: Enhanced Transformer with Rotary Position Embedding (Su et al., 2021)"
+url = "https://arxiv.org/abs/2104.09864"
+[[references]]
+title = "Rotary Embeddings: A Relative Revolution (EleutherAI blog)"
+url = "https://blog.eleuther.ai/rotary-embeddings/"
+
+[[experiments]]
+name = "Fast rotation"
+description = "rope_base = 10: every pair spins quickly."
+params = { rope_base = 10.0 }

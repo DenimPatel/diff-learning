@@ -1,0 +1,25 @@
+title = "Warmup + cosine schedule"
+parent = "10-microgpt"
+variant = true
+summary = "The learning-rate schedule most LLMs use: ramp up linearly, then decay along a cosine."
+tags = ["learning rate", "schedule"]
+updated = 2026-09-24
+
+[[references]]
+title = "SGDR: Stochastic Gradient Descent with Warm Restarts (cosine schedule)"
+url = "https://arxiv.org/abs/1608.03983"
+[[references]]
+title = "Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour (warmup)"
+url = "https://arxiv.org/abs/1706.02677"
+[[references]]
+title = "MiniCPM: WSD (warmup-stable-decay) schedule"
+url = "https://arxiv.org/abs/2404.06395"
+
+[[experiments]]
+name = "No warmup"
+description = "Straight into cosine decay from the peak."
+params = { warmup_steps = 0 }
+[[experiments]]
+name = "Long warmup"
+description = "Half the run spent warming up."
+params = { warmup_steps = 75 }

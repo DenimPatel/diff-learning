@@ -1,0 +1,32 @@
+title = "Mixture of Experts (MoE)"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Many MLPs per layer, with a learned router that sends each token to its top-k. More parameters, the same compute per token."
+tags = ["moe", "routing", "sparsity"]
+updated = 2026-09-24
+
+[[references]]
+title = "Outrageously Large Neural Networks: The Sparsely-Gated MoE Layer (Shazeer et al., 2017)"
+url = "https://arxiv.org/abs/1701.06538"
+[[references]]
+title = "Switch Transformers (load-balancing loss, Fedus et al., 2021)"
+url = "https://arxiv.org/abs/2101.03961"
+[[references]]
+title = "Mixtral of Experts (2024)"
+url = "https://arxiv.org/abs/2401.04088"
+[[references]]
+title = "DeepSeek-V3 Technical Report (fine-grained + shared experts, aux-loss-free balancing)"
+url = "https://arxiv.org/abs/2412.19437"
+
+[[experiments]]
+name = "No balancing"
+description = "aux_loss_coef = 0: watch 'busiest' climb as the router favors a few experts."
+params = { aux_loss_coef = 0.0 }
+[[experiments]]
+name = "Top-1 (Switch)"
+description = "Each token uses a single expert."
+params = { top_k = 1 }
+[[experiments]]
+name = "8 experts, top-2"
+description = "Mixtral-style: 8 experts, 2 active."
+params = { n_expert = 8, top_k = 2 }

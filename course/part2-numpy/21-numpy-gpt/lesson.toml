@@ -1,0 +1,25 @@
+title = "microgpt on tensors"
+parent = "20-tensor-autograd"
+summary = "The same GPT as lesson 10, batched over sequences and positions: ~100x faster, ready for experiments."
+tags = ["gpt", "numpy", "batching", "milestone"]
+updated = 2026-09-24
+
+[[references]]
+title = "nanoGPT (Karpathy): this model in PyTorch, at GPT-2 scale"
+url = "https://github.com/karpathy/nanoGPT"
+[[references]]
+title = "modded-nanogpt: speedrun of up-to-date training tricks"
+url = "https://github.com/KellerJordan/modded-nanogpt"
+
+[[experiments]]
+name = "Bigger model"
+description = "n_embd 64, 3 layers."
+params = { n_embd = 64, n_layer = 3 }
+[[experiments]]
+name = "Batch of 1"
+description = "One sequence per step, like microgpt: a much noisier loss."
+params = { batch_size = 1 }
+[[experiments]]
+name = "lr 0.05"
+description = "Too high for this model."
+params = { learning_rate = 0.05 }

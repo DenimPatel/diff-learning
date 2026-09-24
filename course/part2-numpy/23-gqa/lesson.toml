@@ -1,0 +1,22 @@
+title = "GQA / MQA: sharing keys & values"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Fewer key/value heads than query heads: a much smaller KV cache for almost no loss."
+tags = ["attention", "inference", "kv cache", "gqa"]
+updated = 2026-09-24
+
+[[references]]
+title = "GQA: Training Generalized Multi-Query Transformer Models (Ainslie et al., 2023)"
+url = "https://arxiv.org/abs/2305.13245"
+[[references]]
+title = "Fast Transformer Decoding: One Write-Head is All You Need (MQA, Shazeer, 2019)"
+url = "https://arxiv.org/abs/1911.02150"
+
+[[experiments]]
+name = "MHA"
+description = "n_kv_head = n_head: standard multi-head attention (the baseline)."
+params = { n_kv_head = 4 }
+[[experiments]]
+name = "GQA 2 groups"
+description = "Pairs of query heads share a key/value head."
+params = { n_kv_head = 2 }

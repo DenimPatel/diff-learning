@@ -1,0 +1,22 @@
+title = "Gradient descent & the learning rate"
+parent = "02-autograd"
+summary = "Loss, backward and a step downhill: the loop every model trains with. And why the step size matters."
+tags = ["optimization", "learning rate"]
+updated = 2026-09-24
+
+[[experiments]]
+name = "Too small"
+description = "Converges, but slowly."
+params = { learning_rate = 0.01 }
+[[experiments]]
+name = "One step"
+description = "For this parabola lr=0.5 lands exactly on the minimum."
+params = { learning_rate = 0.5 }
+[[experiments]]
+name = "Oscillating"
+description = "Overshoots back and forth, but still converges."
+params = { learning_rate = 0.95 }
+[[experiments]]
+name = "Diverging"
+description = "Every step overshoots further than the last. The loss explodes."
+params = { learning_rate = 1.05 }

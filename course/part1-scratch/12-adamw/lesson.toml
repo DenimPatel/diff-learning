@@ -1,0 +1,19 @@
+title = "AdamW: decoupled weight decay"
+parent = "10-microgpt"
+variant = true
+summary = "Shrink the weights a little every step, separately from the gradient update."
+tags = ["optimization", "regularization", "adamw"]
+updated = 2026-09-24
+
+[[references]]
+title = "Decoupled Weight Decay Regularization (Loshchilov & Hutter, 2017)"
+url = "https://arxiv.org/abs/1711.05101"
+
+[[experiments]]
+name = "No decay"
+description = "weight_decay = 0 is plain Adam. Compare wnorm."
+params = { weight_decay = 0.0 }
+[[experiments]]
+name = "Strong decay"
+description = "weight_decay = 1.0: the weights are held small, which hurts the fit."
+params = { weight_decay = 1.0 }

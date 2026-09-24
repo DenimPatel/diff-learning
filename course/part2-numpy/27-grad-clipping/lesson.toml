@@ -1,0 +1,19 @@
+title = "Gradient clipping"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Cap the total gradient length so one bad batch can't wreck training."
+tags = ["optimization", "stability"]
+updated = 2026-09-24
+
+[[references]]
+title = "On the difficulty of training recurrent neural networks (Pascanu et al., 2012)"
+url = "https://arxiv.org/abs/1211.5063"
+
+[[experiments]]
+name = "High lr, clipped"
+description = "lr 0.05 with max_grad_norm 0.1."
+params = { learning_rate = 0.05, max_grad_norm = 0.1 }
+[[experiments]]
+name = "High lr, unclipped"
+description = "lr 0.05 with a limit so large it never kicks in."
+params = { learning_rate = 0.05, max_grad_norm = 100.0 }

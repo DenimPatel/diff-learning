@@ -1,0 +1,14 @@
+title = "Position embeddings, MLP & residuals"
+parent = "05-adam"
+summary = "Give the model a sense of position and a hidden layer, wrapped in a residual connection."
+tags = ["mlp", "residual", "position embedding"]
+updated = 2026-09-24
+
+[[references]]
+title = "Deep Residual Learning for Image Recognition (He et al., 2015)"
+url = "https://arxiv.org/abs/1512.03385"
+
+[[experiments]]
+name = "Deeper, no norm"
+description = "n_layer = 3. Compare this curve later with the same setting in lesson 09 (RMSNorm)."
+params = { n_layer = 3 }

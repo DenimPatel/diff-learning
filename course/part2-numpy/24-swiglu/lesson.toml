@@ -1,0 +1,13 @@
+title = "SwiGLU feed-forward"
+parent = "21-numpy-gpt"
+variant = true
+summary = "A gated MLP with a smooth activation. The feed-forward block in Llama, Qwen, Mistral and most current LLMs."
+tags = ["mlp", "activation", "swiglu"]
+updated = 2026-09-24
+
+[[references]]
+title = "GLU Variants Improve Transformer (Shazeer, 2020)"
+url = "https://arxiv.org/abs/2002.05202"
+[[references]]
+title = "Searching for Activation Functions (Swish / SiLU, Ramachandran et al., 2017)"
+url = "https://arxiv.org/abs/1710.05941"

@@ -1,0 +1,14 @@
+title = "Data & tokenizer"
+parent = "00-empty-file"
+summary = "A dataset of names, and a character-level tokenizer that turns text into integers."
+tags = ["data", "tokenizer"]
+updated = 2026-09-24
+
+[[references]]
+title = "makemore names.txt dataset"
+url = "https://github.com/karpathy/makemore"
+
+[[experiments]]
+name = "A longer name"
+description = "Pick another document and see how many prediction tasks a single name contains."
+params = { doc_index = 7 }

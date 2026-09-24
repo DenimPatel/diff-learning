@@ -1,0 +1,12 @@
+title = "Tensor autograd"
+parent = "02-autograd"
+summary = "Value, but for whole arrays: the same backward pass with vector-Jacobian products and broadcasting."
+tags = ["autograd", "numpy", "tensors"]
+updated = 2026-09-24
+
+[[references]]
+title = "PyTorch autograd mechanics"
+url = "https://pytorch.org/docs/stable/notes/autograd.html"
+[[references]]
+title = "tinygrad: a small tensor library built the same way"
+url = "https://github.com/tinygrad/tinygrad"

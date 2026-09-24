@@ -1,0 +1,17 @@
+title = "RMSNorm & the transformer block"
+parent = "08-multi-head-attention"
+summary = "Normalize before each sub-block (pre-norm) to keep activations at a sane scale, and stacking layers just works."
+tags = ["normalization", "rmsnorm", "transformer"]
+updated = 2026-09-24
+
+[[references]]
+title = "Root Mean Square Layer Normalization (Zhang & Sennrich, 2019)"
+url = "https://arxiv.org/abs/1910.07467"
+[[references]]
+title = "On Layer Normalization in the Transformer Architecture (pre-norm, Xiong et al., 2020)"
+url = "https://arxiv.org/abs/2002.04745"
+
+[[experiments]]
+name = "3 layers"
+description = "Deeper. Compare with the n_layer = 3 run from lesson 06."
+params = { n_layer = 3 }

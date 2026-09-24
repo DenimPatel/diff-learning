@@ -1,0 +1,17 @@
+title = "Autograd: the Value"
+parent = "01-data-and-tokenizer"
+summary = "A scalar that remembers how it was computed, so backward() can apply the chain rule."
+tags = ["autograd", "backprop"]
+updated = 2026-09-24
+
+[[references]]
+title = "micrograd (Karpathy): the Value class explained in a 2.5h video"
+url = "https://github.com/karpathy/micrograd"
+[[references]]
+title = "Calculus on Computational Graphs: Backpropagation (Chris Olah)"
+url = "https://colah.github.io/posts/2015-08-Backprop/"
+
+[[experiments]]
+name = "a = 0"
+description = "dL/db becomes 0: when a is zero, b has no effect on L."
+params = { a_val = 0.0, b_val = 1.0 }

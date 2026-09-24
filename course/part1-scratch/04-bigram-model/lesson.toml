@@ -1,0 +1,18 @@
+title = "The first model: bigram"
+parent = "03-gradient-descent"
+summary = "Embeddings, logits, softmax, cross-entropy and sampling: a complete (tiny) language model."
+tags = ["model", "softmax", "cross-entropy", "sampling"]
+updated = 2026-09-24
+
+[[experiments]]
+name = "lr too low"
+description = "SGD with a small learning rate barely moves in 500 steps."
+params = { learning_rate = 0.05 }
+[[experiments]]
+name = "lr too high"
+description = "Blows up: a probability underflows to exactly 0 and log(0) raises 'math domain error'. This is what divergence looks like in practice."
+params = { learning_rate = 6.0 }
+[[experiments]]
+name = "Tiny embedding"
+description = "n_embd = 1: one number per character is not enough to say what comes next."
+params = { n_embd = 1 }

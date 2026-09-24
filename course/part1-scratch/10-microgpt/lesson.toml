@@ -1,0 +1,25 @@
+title = "microgpt: LR decay & temperature"
+parent = "09-rmsnorm"
+summary = "Two finishing touches, and the file is Karpathy's microgpt: a complete GPT in ~200 lines."
+tags = ["gpt", "learning rate", "sampling", "milestone"]
+updated = 2026-09-24
+
+[[references]]
+title = "microgpt.py (Karpathy)"
+url = "https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95"
+[[references]]
+title = "Language Models are Unsupervised Multitask Learners (GPT-2)"
+url = "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
+
+[[experiments]]
+name = "Cold sampling"
+description = "temperature 0.1: almost greedy, very common names."
+params = { temperature = 0.1 }
+[[experiments]]
+name = "Hot sampling"
+description = "temperature 1.5: creative, often unpronounceable."
+params = { temperature = 1.5 }
+[[experiments]]
+name = "Full microgpt run"
+description = "1000 steps like the original. Takes a few minutes in the browser."
+params = { num_steps = 1000, num_samples = 20 }

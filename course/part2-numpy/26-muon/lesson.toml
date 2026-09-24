@@ -1,0 +1,25 @@
+title = "Muon optimizer"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Orthogonalize the momentum of each weight matrix before stepping. A recent optimizer behind speedrun records and Kimi K2."
+tags = ["optimization", "muon"]
+updated = 2026-09-24
+
+[[references]]
+title = "Muon: An optimizer for hidden layers in neural networks (Keller Jordan, 2024)"
+url = "https://kellerjordan.github.io/posts/muon/"
+[[references]]
+title = "Muon is Scalable for LLM Training (Moonshot AI, 2025)"
+url = "https://arxiv.org/abs/2502.16982"
+[[references]]
+title = "Old Optimizer, New Norm: An Anthology (Bernstein & Newhouse, 2024)"
+url = "https://arxiv.org/abs/2409.20325"
+
+[[experiments]]
+name = "Muon lr 0.05"
+description = "Muon tolerates quite large steps."
+params = { muon_lr = 0.05 }
+[[experiments]]
+name = "No momentum"
+description = "muon_momentum = 0: orthogonalize the raw gradient."
+params = { muon_momentum = 0.0 }
