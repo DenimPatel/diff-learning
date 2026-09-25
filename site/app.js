@@ -77,6 +77,13 @@ function syncPrefControls() {
     else if (el.classList.contains('seg-btn')) el.classList.toggle('active', String(v) === el.dataset.value);
     else el.value = v;
   });
+  // context and expand-all only mean something when the diff folds unchanged lines
+  document.querySelectorAll('.diff-tools').forEach(t => {
+    const noFolds = t.classList.contains('pg-tools') ? S.pgMode !== 'diff' : S.diffMode === 'full';
+    t.querySelector('.ctx-field').hidden = noFolds;
+    t.querySelector('[data-expand]').hidden = noFolds;
+  });
+  if (S.editor) S.editor.setOption('lineWrapping', !!S.prefs.diffWrap);
   syncPaneToggles();
 }
 
@@ -290,7 +297,7 @@ function renderDiff(el, oldCode, newCode, mode, statsEl) {
   if (statsEl) statsEl.innerHTML = `<span class="plus">+${adds}</span> <span class="minus">−${dels}</span>`;
   if (!rows.length) { el.innerHTML = '<div class="empty">An empty file.</div>'; return; }
   if (mode === 'changes' && !adds && !dels) { el.innerHTML = '<div class="empty">No changes: the code is identical.</div>'; return; }
-  const CTX = 3;
+  const CTX = S.prefs.ctxLines === 'all' ? Infinity : S.prefs.ctxLines;
   const out = [];
   let i = 0;
   while (i < rows.length) {
@@ -312,11 +319,11 @@ function renderDiff(el, oldCode, newCode, mode, statsEl) {
   }
   el.innerHTML = `<table><tbody>${out.join('')}</tbody></table>`;
   el.querySelectorAll('tr.fold').forEach(tr => {
-    const open = () => { const body = tr.parentElement; body.nextElementSibling.hidden = false; body.remove(); };
-    tr.addEventListener('click', open);
-    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    tr.addEventListener('click', () => openFold(tr));
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFold(tr); } });
   });
 }
+function openFold(tr) { const body = tr.parentElement; body.nextElementSibling.hidden = false; body.remove(); }
 
 // ---------------------------------------------------------------- playground
 function draftKey(id) { return 'dl-draft:' + id; }
@@ -324,7 +331,7 @@ function draftKey(id) { return 'dl-draft:' + id; }
 function ensureEditor() {
   if (S.editor) return;
   S.editor = CodeMirror.fromTextArea($('#pg-editor'), {
-    mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, lineWrapping: false,
+    mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, lineWrapping: !!S.prefs.diffWrap,
     extraKeys: {
       Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    '),
       'Shift-Tab': cm => cm.indentSelection('subtract'),
@@ -368,6 +375,7 @@ function setPgMode(mode) {
   if (mode === 'diff') renderDiff($('#pg-diff'), S.byId[S.lessonId].code, S.editor.getValue(), 'changes', null);
   else S.editor.refresh();
   updatePgStats();
+  syncPrefControls();
 }
 
 function updatePgStats() {
@@ -764,6 +772,10 @@ function bindPrefControls() {
     const b = e.target.closest('button[data-pref]');
     if (b) setPref(b.dataset.pref, prefValue(b.dataset.pref, b.dataset.value));
   });
+  document.addEventListener('input', e => {
+    const el = e.target.closest('input[type=range][data-pref]');
+    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.value));
+  });
   document.addEventListener('change', e => {
     const el = e.target.closest('input[data-pref], select[data-pref]');
     if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.type === 'checkbox' ? el.checked : el.value));
@@ -783,6 +795,7 @@ function bindUi() {
     S.diffMode = b.dataset.mode;
     document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
     renderLessonDiff();
+    syncPrefControls();
   }));
   $('#copy-code').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(S.byId[S.lessonId].code); $('#copy-code').textContent = 'Copied'; }
@@ -792,6 +805,8 @@ function bindUi() {
   $('#download-code').addEventListener('click', () => download(`${S.lessonId}.py`, S.byId[S.lessonId].code));
   $('#open-playground').addEventListener('click', () => { location.hash = '#/playground/' + S.lessonId; });
 
+  document.querySelectorAll('[data-expand]').forEach(b => b.addEventListener('click', () =>
+    document.getElementById(b.dataset.expand).querySelectorAll('tr.fold').forEach(openFold)));
   $('#pg-base').addEventListener('change', e => { location.hash = '#/playground/' + e.target.value; });
   $('#pg-reset').addEventListener('click', () => {
     if (!confirm('Discard your edits and restore the lesson code?')) return;

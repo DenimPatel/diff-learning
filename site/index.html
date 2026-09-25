@@ -77,6 +77,18 @@
             <button class="btn ghost small" id="download-code" title="Download as code.py">Download</button>
             <button class="btn small" id="open-playground">Edit in Playground →</button>
           </div>
+          <div class="diff-tools" role="group" aria-label="Diff display">
+          <span class="inline-field ctx-field">context
+            <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+              <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+            </span>
+          </span>
+          <button class="btn ghost small" data-expand="diff">expand all</button>
+          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap lines</label>
+          <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
+        </div>
           <div class="diff" id="diff"></div>
         </section>
 
@@ -97,6 +109,18 @@
           <span class="diff-stats" id="pg-stats"></span>
         </div>
         <p class="hint">Your edits are saved in this browser. Add <code># @param {"min": 0, "max": 1}</code> to any assignment to get a knob in the lab. Print lines like <code>step 3 | loss 2.1</code> to chart them.</p>
+        <div class="diff-tools pg-tools" role="group" aria-label="Diff display">
+        <span class="inline-field ctx-field">context
+          <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+            <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+            <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+            <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+          </span>
+        </span>
+        <button class="btn ghost small" data-expand="pg-diff">expand all</button>
+        <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap lines</label>
+        <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
+        </div>
         <div class="editor-wrap" id="pg-editor-wrap"><textarea id="pg-editor"></textarea></div>
         <div class="diff" id="pg-diff" hidden></div>
       </section>

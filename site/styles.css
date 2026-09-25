@@ -149,7 +149,7 @@ h1 { font-size: 30px; line-height: 1.2; margin: 4px 0 8px; letter-spacing: -.01e
 .prose p, .prose li { color: var(--text); }
 .prose code { background: var(--surface-2); border: 1px solid var(--border); padding: 0 4px; border-radius: 5px; font-size: .88em; }
 .prose pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; overflow-x: auto; }
-.prose pre code { background: none; border: 0; padding: 0; font-size: 13px; }
+.prose pre code { background: none; border: 0; padding: 0; font-size: var(--code-size, 12.5px); }
 .prose table { border-collapse: collapse; margin: 10px 0; font-size: 14px; display: block; overflow-x: auto; }
 .prose th, .prose td { border: 1px solid var(--border); padding: 5px 10px; text-align: left; }
 .prose th { background: var(--surface-2); }
@@ -185,7 +185,11 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .btn:focus-visible, .seg-btn:focus-visible, .nav-item:focus-visible, .tab:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- diff ---------- */
-.diff { overflow-x: auto; background: var(--code-bg); font: 12.5px/1.55 "JetBrains Mono", monospace; }
+.diff-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 5px 14px; border-bottom: 1px solid var(--border); background: var(--surface); font-size: 13px; }
+.diff-tools .seg-btn { padding: 0 8px; font-size: 12px; }
+.diff-tools input[type=range] { width: 80px; accent-color: var(--accent); }
+.pg-tools { border: 1px solid var(--border); border-radius: 12px 12px 0 0; }
+.diff { overflow-x: auto; background: var(--code-bg); font: var(--code-size, 12.5px)/1.55 "JetBrains Mono", monospace; }
 .diff table { border-collapse: collapse; width: 100%; }
 .diff td { padding: 0 10px; white-space: pre; vertical-align: top; }
 .diff td.ln { width: 1%; min-width: 38px; text-align: right; color: var(--text-3); user-select: none; padding: 0 6px; }
@@ -198,6 +202,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .diff tr.del td.mk { color: var(--del-mark); }
 .diff tr.fold td { background: var(--fold-bg); color: var(--accent); cursor: pointer; padding: 3px 10px; font-family: Inter, sans-serif; font-size: 12.5px; }
 .diff tr.fold:hover td { text-decoration: underline; }
+.diff-wrap .diff td:not(.ln):not(.mk) { white-space: pre-wrap; word-break: break-word; }
 .diff .empty { padding: 18px; color: var(--text-3); font-family: Inter, sans-serif; }
 
 /* syntax (highlight.js + CodeMirror share the palette) */
@@ -216,16 +221,16 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .pager a.next { text-align: right; margin-left: auto; }
 
 /* ---------- playground ---------- */
-.pg-head { border: 1px solid var(--border); border-radius: 12px 12px 0 0; background: var(--surface); }
+.pg-head { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .hint { font-size: 13px; color: var(--text-3); margin: 8px 2px; }
 .hint code { font-size: 12px; background: var(--surface-2); padding: 0 4px; border-radius: 4px; }
-.editor-wrap { border: 1px solid var(--border); border-radius: 0 0 12px 12px; overflow: hidden; }
-.CodeMirror { height: calc(100vh - 230px); min-height: 360px; font-size: 13px; background: var(--code-bg); color: var(--text); }
+.editor-wrap { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px; overflow: hidden; }
+.CodeMirror { height: calc(100vh - 262px); min-height: 360px; font-size: var(--code-size, 12.5px); background: var(--code-bg); color: var(--text); }
 .CodeMirror-gutters { background: var(--surface-2); border-right: 1px solid var(--border); }
 .CodeMirror-linenumber { color: var(--text-3); }
 .CodeMirror-cursor { border-left-color: var(--text); }
 .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--accent-soft) !important; }
-#pg-diff { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px; max-height: calc(100vh - 230px); overflow: auto; }
+#pg-diff { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px; max-height: calc(100vh - 262px); overflow: auto; }
 
 /* ---------- lab ---------- */
 .lab-head { display: flex; align-items: baseline; gap: 10px; }
@@ -266,7 +271,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .run-table table { border-collapse: collapse; width: 100%; font: 12px "JetBrains Mono", monospace; }
 .run-table th, .run-table td { border-bottom: 1px solid var(--border); padding: 2px 6px; text-align: right; }
 .run-table th:first-child, .run-table td:first-child { text-align: left; }
-.console { margin: 0; padding: 8px 10px; height: 220px; overflow: auto; font-size: 12px; line-height: 1.45; background: var(--code-bg); border-radius: 0 0 10px 10px; white-space: pre-wrap; word-break: break-word; }
+.console { margin: 0; padding: 8px 10px; height: 220px; overflow: auto; font-size: calc(var(--code-size, 12.5px) - .5px); line-height: 1.45; background: var(--code-bg); border-radius: 0 0 10px 10px; white-space: pre-wrap; word-break: break-word; }
 .console .err { color: var(--bad); }
 .console .sys { color: var(--text-3); }
 
