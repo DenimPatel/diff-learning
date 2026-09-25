@@ -219,7 +219,14 @@ function bindResizers() {
   let frame = null;
   new ResizeObserver(() => {
     if (frame) return;
-    frame = requestAnimationFrame(() => { frame = null; if (S.editor && S.view === 'playground') S.editor.refresh(); updateResizerAria(); });
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      if (S.editor && S.view === 'playground') S.editor.refresh();
+      updateResizerAria();
+      // split diffs fall back to unified in a narrow pane: re-render when the width crosses the line
+      const el = S.view === 'lesson' ? $('#diff') : $('#pg-diff');
+      if (S.prefs.diffLayout === 'split' && el.querySelector('table') && (el.clientWidth >= SPLIT_MIN_WIDTH) !== el.classList.contains('split')) rerenderDiffs();
+    });
   }).observe($('#main'));
 }
 // heights of the chart and the console (drag the handle under each)
@@ -293,7 +300,6 @@ function layoutChanged() {
     if (S.editor) S.editor.refresh();
     if (chart) chart.resize();
     updateResizerAria();
-    if (S.prefs.diffLayout === 'split') rerenderDiffs(); // it falls back to unified when the pane is narrow
   });
 }
 
