@@ -12,8 +12,17 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
   <link rel="stylesheet" href="styles.css">
   <script>
-    // apply the saved theme before first paint
-    try { const t = localStorage.getItem('dl-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    // apply the saved theme and pane layout before first paint (app.js applies the rest)
+    try {
+      const root = document.documentElement;
+      const t = localStorage.getItem('dl-theme'); if (t) root.dataset.theme = t;
+      const p = JSON.parse(localStorage.getItem('dl-prefs')) || {};
+      root.classList.toggle('nav-hidden', !!p.navHidden);
+      root.classList.toggle('lab-hidden', !!p.labHidden);
+      root.classList.toggle('focus', !!p.focus);
+      if (p.navW) root.style.setProperty('--nav-w', p.navW + 'px');
+      if (p.labW) root.style.setProperty('--lab-w', p.labW + 'px');
+    } catch (e) {}
   </script>
 </head>
 <body>

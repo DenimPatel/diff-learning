@@ -11,6 +11,26 @@ const store = {
   del(key) { try { localStorage.removeItem(key); } catch (e) { /* ignore */ } },
 };
 
+// Display preferences: one object in localStorage, applied as classes and CSS variables on <html>.
+// navW/labW are null until the user drags a pane, so the CSS defaults (and breakpoints) apply.
+const DEFAULT_PREFS = {
+  navHidden: false, labHidden: false, navW: null, labW: null, focus: false,
+  ctxLines: 3, diffWrap: false, codeSize: 12.5, contentWidth: 'normal', proseSize: 'm',
+  smooth: 0.9,
+};
+const PREF_CLASSES = { navHidden: 'nav-hidden', labHidden: 'lab-hidden', focus: 'focus', diffWrap: 'diff-wrap' };
+const CONTENT_WIDTHS = { narrow: '720px', normal: '920px', wide: '1200px', full: 'none' };
+const PROSE_SIZES = { s: '14px', m: '15px', l: '17px' };
+const DIFF_PREFS = ['ctxLines'];
+const LAYOUT_PREFS = ['navHidden', 'labHidden', 'navW', 'labW', 'focus', 'codeSize', 'contentWidth'];
+
+function loadPrefs() {
+  const saved = store.get('dl-prefs', null);
+  const prefs = { ...DEFAULT_PREFS, ...(saved && typeof saved === 'object' ? saved : {}) };
+  if (!saved) prefs.smooth = store.get('dl-smooth', DEFAULT_PREFS.smooth); // older key
+  return prefs;
+}
+
 const MAX_RUNS = 8; // one per categorical color slot
 const S = {
   course: null, byId: {}, order: [],
@@ -22,7 +42,53 @@ const S = {
   worker: null, workerReady: false,
   editor: null, pgMode: 'edit', pgKnobs: [],
   done: new Set(store.get('dl-done', [])),
+  prefs: loadPrefs(),
 };
+
+function applyPrefs() {
+  const root = document.documentElement, p = S.prefs;
+  for (const [key, cls] of Object.entries(PREF_CLASSES)) root.classList.toggle(cls, !!p[key]);
+  const vars = {
+    '--nav-w': p.navW && p.navW + 'px',
+    '--lab-w': p.labW && p.labW + 'px',
+    '--code-size': p.codeSize + 'px',
+    '--content-width': CONTENT_WIDTHS[p.contentWidth],
+    '--prose-size': PROSE_SIZES[p.proseSize],
+  };
+  for (const [k, v] of Object.entries(vars)) v ? root.style.setProperty(k, v) : root.style.removeProperty(k);
+  syncPrefControls();
+}
+
+function setPrefs(changes) {
+  Object.assign(S.prefs, changes);
+  store.set('dl-prefs', S.prefs);
+  applyPrefs();
+  const keys = Object.keys(changes);
+  if (keys.some(k => DIFF_PREFS.includes(k))) rerenderDiffs();
+  if (keys.some(k => LAYOUT_PREFS.includes(k))) layoutChanged();
+}
+function setPref(key, value) { setPrefs({ [key]: value }); }
+
+// reflect prefs in whatever controls show them
+function syncPrefControls() {
+  document.querySelectorAll('[data-pref]').forEach(el => {
+    const v = S.prefs[el.dataset.pref];
+    if (el.type === 'checkbox') el.checked = !!v;
+    else if (el.classList.contains('seg-btn')) el.classList.toggle('active', String(v) === el.dataset.value);
+    else el.value = v;
+  });
+}
+
+// after a pane changes size: CodeMirror measures itself only when told, Chart.js follows its container
+function layoutChanged() {
+  requestAnimationFrame(() => { if (S.editor) S.editor.refresh(); if (chart) chart.resize(); });
+}
+
+function rerenderDiffs() {
+  if (!S.lessonId) return;
+  if (S.view === 'lesson') renderLessonDiff();
+  else if (S.pgMode === 'diff') setPgMode('diff');
+}
 
 // ---------------------------------------------------------------- boot
 async function boot() {
@@ -33,8 +99,9 @@ async function boot() {
     return;
   }
   for (const l of S.course.lessons) { S.byId[l.id] = l; S.order.push(l.id); }
-  S.smooth = store.get('dl-smooth', 0.9);
+  S.smooth = S.prefs.smooth;
   $('#smooth').value = S.smooth;
+  applyPrefs();
   buildNav();
   bindUi();
   window.addEventListener('hashchange', route);
@@ -664,7 +731,26 @@ function toggleTheme() {
   drawChart();
 }
 
+// value from a [data-pref] control, typed like the default (numbers stay numbers)
+function prefValue(key, raw) {
+  if (typeof raw === 'boolean') return raw;
+  const def = DEFAULT_PREFS[key];
+  return (typeof def === 'number' || def === null) && raw !== '' && isFinite(raw) ? Number(raw) : raw;
+}
+
+function bindPrefControls() {
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-pref]');
+    if (b) setPref(b.dataset.pref, prefValue(b.dataset.pref, b.dataset.value));
+  });
+  document.addEventListener('change', e => {
+    const el = e.target.closest('input[data-pref], select[data-pref]');
+    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.type === 'checkbox' ? el.checked : el.value));
+  });
+}
+
 function bindUi() {
+  bindPrefControls();
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
   $('#nav-toggle').addEventListener('click', () => {
@@ -713,7 +799,7 @@ function bindUi() {
   });
 
   $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; drawChart(); });
-  $('#smooth').addEventListener('input', e => { S.smooth = +e.target.value; store.set('dl-smooth', S.smooth); drawChart(); });
+  $('#smooth').addEventListener('input', e => { S.smooth = +e.target.value; setPref('smooth', S.smooth); drawChart(); });
   $('#logy').addEventListener('change', e => { S.logY = e.target.checked; drawChart(); });
   $('#table-toggle').addEventListener('click', () => {
     S.showTable = !S.showTable;
