@@ -99,14 +99,24 @@ button, select, input { font: inherit; color: inherit; }
   background: none; border: 1px solid transparent; color: var(--text-2); cursor: pointer;
 }
 .icon-btn:hover { background: var(--surface-2); }
-.nav-toggle { display: none; }
+.icon-btn[aria-expanded="true"] { color: var(--text); }
 
 /* ---------- layout ---------- */
+/* pane widths are variables so the user can resize them; hidden panes collapse their column */
+:root { --nav-w: 272px; --lab-w: 420px; }
 .layout {
   display: grid;
-  grid-template-columns: 272px minmax(0, 1fr) 420px;
+  grid-template-areas: "nav main lab";
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--lab-w);
   height: calc(100vh - 52px);
 }
+.nav { grid-area: nav; }
+.main { grid-area: main; }
+.lab { grid-area: lab; }
+.nav-hidden .nav, .lab-hidden .lab, .focus .nav, .focus .lab { display: none; }
+.nav-hidden .layout { grid-template-columns: 0 minmax(0, 1fr) var(--lab-w); }
+.lab-hidden .layout { grid-template-columns: var(--nav-w) minmax(0, 1fr) 0; }
+.nav-hidden.lab-hidden .layout, .focus .layout { grid-template-columns: 0 minmax(0, 1fr) 0; }
 .nav, .main, .lab { overflow-y: auto; min-width: 0; }
 .nav { border-right: 1px solid var(--border); background: var(--surface); padding: 12px 10px 40px; }
 .main { padding: 28px 36px 60px; }
@@ -262,19 +272,24 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 
 /* ---------- responsive ---------- */
 @media (max-width: 1280px) {
-  .layout { grid-template-columns: 240px minmax(0, 1fr) 380px; }
+  :root { --nav-w: 240px; --lab-w: 380px; }
   .main { padding: 24px 24px 60px; }
 }
+/* below 1060px the Lab stacks under the lesson; custom widths don't apply */
 @media (max-width: 1060px) {
-  .layout { grid-template-columns: 240px minmax(0, 1fr); height: auto; }
+  .layout, .lab-hidden .layout { grid-template-areas: "nav main" "nav lab"; grid-template-columns: 240px minmax(0, 1fr); height: auto; }
+  .nav-hidden .layout, .nav-hidden.lab-hidden .layout, .focus .layout { grid-template-columns: 0 minmax(0, 1fr); }
   .nav { height: calc(100vh - 52px); position: sticky; top: 52px; }
   .main, .lab { overflow: visible; }
-  .lab { grid-column: 2; border-left: 0; border-top: 1px solid var(--border); }
+  .lab { border-left: 0; border-top: 1px solid var(--border); }
   .tagline { display: none; }
 }
+/* phones: the lesson list is a drawer opened by the menu button, whatever the saved setting */
 @media (max-width: 760px) {
-  .layout { grid-template-columns: minmax(0, 1fr); }
-  .nav-toggle { display: grid; }
+  .layout, .nav-hidden .layout, .lab-hidden .layout, .nav-hidden.lab-hidden .layout, .focus .layout {
+    grid-template-areas: "main" "lab"; grid-template-columns: minmax(0, 1fr);
+  }
+  .nav-hidden .nav, .focus .nav { display: block; }
   .nav {
     position: fixed; top: 52px; left: 0; bottom: 0; width: min(300px, 85vw); height: auto; z-index: 25;
     transform: translateX(-102%); transition: transform .2s; box-shadow: var(--shadow);

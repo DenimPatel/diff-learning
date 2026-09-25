@@ -77,7 +77,28 @@ function syncPrefControls() {
     else if (el.classList.contains('seg-btn')) el.classList.toggle('active', String(v) === el.dataset.value);
     else el.value = v;
   });
+  syncPaneToggles();
 }
+
+// on phones the lesson list is a drawer; elsewhere it's a pane the user can hide
+const isDrawer = () => matchMedia('(max-width: 760px)').matches;
+function toggleNav() {
+  if (isDrawer()) { document.body.classList.toggle('nav-open'); syncPaneToggles(); }
+  else setPref('navHidden', !S.prefs.navHidden);
+}
+function toggleLab() { setPref('labHidden', !S.prefs.labHidden); }
+function syncPaneToggles() {
+  const navOpen = isDrawer() ? document.body.classList.contains('nav-open') : !S.prefs.navHidden && !S.prefs.focus;
+  const labOpen = !S.prefs.labHidden && !S.prefs.focus;
+  const nav = $('#nav-toggle'), lab = $('#lab-toggle');
+  nav.setAttribute('aria-expanded', String(navOpen));
+  nav.title = `${navOpen ? 'Hide' : 'Show'} lessons  [`;
+  lab.setAttribute('aria-expanded', String(labOpen));
+  lab.title = `${labOpen ? 'Hide' : 'Show'} the lab  ]`;
+}
+
+// typing in a field or the editor: single-key shortcuts must not fire
+const isTyping = (e) => !!e.target.closest?.('input, select, textarea, [contenteditable], .CodeMirror');
 
 // after a pane changes size: CodeMirror measures itself only when told, Chart.js follows its container
 function layoutChanged() {
@@ -126,7 +147,7 @@ function route() {
   S.lessonId = id;
   store.set('dl-last', id);
   document.body.classList.remove('nav-open');
-  $('#nav-toggle').setAttribute('aria-expanded', 'false');
+  syncPaneToggles();
 
   $('#tab-lesson').href = '#/lesson/' + id;
   $('#tab-playground').href = '#/playground/' + id;
@@ -753,10 +774,9 @@ function bindUi() {
   bindPrefControls();
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
-  $('#nav-toggle').addEventListener('click', () => {
-    const open = document.body.classList.toggle('nav-open');
-    $('#nav-toggle').setAttribute('aria-expanded', String(open));
-  });
+  $('#nav-toggle').addEventListener('click', toggleNav);
+  $('#lab-toggle').addEventListener('click', toggleLab);
+  matchMedia('(max-width: 760px)').addEventListener('change', () => { document.body.classList.remove('nav-open'); syncPaneToggles(); });
 
   $('#compare-select').addEventListener('change', e => { S.compare = e.target.value; renderLessonDiff(); });
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
@@ -795,7 +815,10 @@ function bindUi() {
   });
   $('#run-btn').addEventListener('click', toggleRun);
   document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e)) return;
+    const shortcut = { '[': toggleNav, ']': toggleLab }[e.key];
+    if (shortcut) { e.preventDefault(); shortcut(); }
   });
 
   $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; drawChart(); });
