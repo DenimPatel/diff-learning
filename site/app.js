@@ -73,7 +73,7 @@ function setPref(key, value) { setPrefs({ [key]: value }); }
 function syncPrefControls() {
   document.querySelectorAll('[data-pref]').forEach(el => {
     const v = S.prefs[el.dataset.pref];
-    if (el.type === 'checkbox') el.checked = !!v;
+    if (el.type === 'checkbox') el.checked = 'invert' in el.dataset ? !v : !!v;
     else if (el.classList.contains('seg-btn')) el.classList.toggle('active', String(v) === el.dataset.value);
     else el.value = v;
   });
@@ -84,6 +84,8 @@ function syncPrefControls() {
     t.querySelector('[data-expand]').hidden = noFolds;
   });
   if (S.editor) S.editor.setOption('lineWrapping', !!S.prefs.diffWrap);
+  const preset = activePreset();
+  document.querySelectorAll('[data-preset]').forEach(b => { b.classList.toggle('active', b.dataset.preset === preset); b.setAttribute('aria-pressed', String(b.dataset.preset === preset)); });
   syncPaneToggles();
 }
 
@@ -91,9 +93,35 @@ function syncPrefControls() {
 const isDrawer = () => matchMedia('(max-width: 760px)').matches;
 function toggleNav() {
   if (isDrawer()) { document.body.classList.toggle('nav-open'); syncPaneToggles(); }
+  else if (S.prefs.focus) setPrefs({ focus: false, navHidden: false });
   else setPref('navHidden', !S.prefs.navHidden);
 }
-function toggleLab() { setPref('labHidden', !S.prefs.labHidden); }
+function toggleLab() {
+  if (S.prefs.focus) setPrefs({ focus: false, labHidden: false });
+  else setPref('labHidden', !S.prefs.labHidden);
+}
+function toggleFocus() { setPref('focus', !S.prefs.focus); }
+
+// one click between reading (no lab) and experimenting (wide lab)
+const PRESETS = {
+  read: () => ({ navHidden: false, labHidden: true, focus: false }),
+  balanced: () => ({ navHidden: false, labHidden: false, focus: false, navW: null, labW: null }),
+  experiment: () => ({ navHidden: true, labHidden: false, focus: false, labW: Math.min(900, Math.round(innerWidth * 0.55), innerWidth - MIN_MAIN) }),
+};
+function activePreset() {
+  const p = S.prefs;
+  if (p.focus) return null;
+  if (!p.navHidden && p.labHidden) return 'read';
+  if (!p.navHidden && !p.labHidden && p.navW === null && p.labW === null) return 'balanced';
+  if (p.navHidden && !p.labHidden) return 'experiment';
+  return null;
+}
+
+function goLesson(delta) {
+  const id = S.order[S.order.indexOf(S.lessonId) + delta];
+  if (id) location.hash = `#/${S.view}/${id}`;
+}
+function showShortcuts() { setDisplayPanel(false); const d = $('#shortcuts'); if (!d.open) d.showModal(); }
 function syncPaneToggles() {
   const navOpen = isDrawer() ? document.body.classList.contains('nav-open') : !S.prefs.navHidden && !S.prefs.focus;
   const labOpen = !S.prefs.labHidden && !S.prefs.focus;
@@ -119,6 +147,8 @@ function bindDisplayPanel() {
     if (e.key === 'Escape') { e.stopPropagation(); setDisplayPanel(false); $('#display-btn').focus(); }
   });
   $('#reset-display').addEventListener('click', () => setPrefs({ ...DEFAULT_PREFS, smooth: S.prefs.smooth }));
+  $('#show-shortcuts').addEventListener('click', showShortcuts);
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setPrefs(PRESETS[b.dataset.preset]())));
 }
 
 // ---- drag handles on the pane borders
@@ -866,7 +896,7 @@ function bindPrefControls() {
   });
   document.addEventListener('change', e => {
     const el = e.target.closest('input[data-pref], select[data-pref]');
-    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.type === 'checkbox' ? el.checked : el.value));
+    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.type === 'checkbox' ? el.checked !== ('invert' in el.dataset) : el.value));
   });
 }
 
@@ -921,8 +951,16 @@ function bindUi() {
   $('#run-btn').addEventListener('click', toggleRun);
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); return; }
-    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e)) return;
-    const shortcut = { '[': toggleNav, ']': toggleLab }[e.key];
+    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || $('#shortcuts').open) return;
+    if (e.key === 'Escape') {
+      if (!$('#display-panel').hidden) setDisplayPanel(false);
+      else if (S.prefs.focus) setPref('focus', false);
+      return;
+    }
+    const shortcut = {
+      '[': toggleNav, ']': toggleLab, '\\': toggleFocus, '?': showShortcuts,
+      j: () => goLesson(1), k: () => goLesson(-1),
+    }[e.key];
     if (shortcut) { e.preventDefault(); shortcut(); }
   });
 

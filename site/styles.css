@@ -104,7 +104,7 @@ button, select, input { font: inherit; color: inherit; }
 /* ---------- display popover ---------- */
 .popover-anchor { position: relative; }
 .popover {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 320px; max-width: calc(100vw - 32px);
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 340px; max-width: calc(100vw - 32px);
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, .16); padding: 6px 14px 10px; font-size: 13px;
 }
@@ -114,7 +114,30 @@ button, select, input { font: inherit; color: inherit; }
 .pref-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; color: var(--text-2); }
 .pref-row input[type=range] { width: 130px; accent-color: var(--accent); }
 .popover .seg-btn { padding: 1px 8px; font-size: 12.5px; }
-.popover-foot { padding-top: 8px; text-align: right; }
+.popover-foot { display: flex; align-items: center; padding-top: 8px; }
+.popover-foot .btn { padding-left: 4px; padding-right: 4px; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.preset {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text-2); font-size: 12.5px; cursor: pointer;
+}
+.preset:hover { border-color: var(--accent); color: var(--text); }
+.preset.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.preset svg { color: var(--accent); }
+.popover .pref-row { display: flex; }
+.pref-row > span { display: inline-flex; align-items: center; gap: 6px; }
+kbd {
+  display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--surface-2); color: var(--text-2); font: 600 11.5px/1.6 "JetBrains Mono", monospace; text-align: center;
+}
+.shortcuts { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); padding: 18px 22px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 12px 40px rgba(0, 0, 0, .25); }
+.shortcuts::backdrop { background: rgba(0, 0, 0, .35); }
+.shortcuts h2 { margin: 0 0 12px; font-size: 16px; }
+.shortcuts dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0 0 16px; font-size: 14px; align-items: center; }
+.shortcuts dt { white-space: nowrap; }
+.shortcuts dd { margin: 0; color: var(--text-2); }
+.shortcuts form { text-align: right; }
+.focus .tagline { visibility: hidden; }
 
 /* ---------- layout ---------- */
 /* pane widths are variables so the user can resize them; hidden panes collapse their column */
