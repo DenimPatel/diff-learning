@@ -41,7 +41,7 @@ const S = {
   view: 'lesson', lessonId: null,
   compare: '', diffMode: 'changes',
   knobValues: {},           // source key -> {name: value}
-  runs: [], nextRunId: 1, running: null,
+  runs: [], nextRunId: 1, running: null, hoverRun: null,
   metric: 'loss', logY: false, smooth: 0.9, showTable: false,
   worker: null, workerReady: false,
   editor: null, pgMode: 'edit', pgKnobs: [],
@@ -661,11 +661,13 @@ function ensureWorker() {
   return S.worker;
 }
 
+// what tells runs apart comes first: the changed knobs, then where the code came from
 function runLabel() {
   const l = S.byId[S.lessonId];
   const ov = overrides();
   const knobs = Object.entries(ov).map(([k, v]) => `${k}=${typeof v === 'number' ? fmt(v, { type: Number.isInteger(v) ? 'int' : 'float' }) : v}`).join(', ');
-  return `${S.view === 'playground' ? 'playground ' : ''}${lessonNum(l)} ${l.title}${knobs ? ' · ' + knobs : ''}`;
+  const source = `${S.view === 'playground' ? 'playground ' : ''}${lessonNum(l)} ${l.title}`;
+  return { knobs, source, text: knobs ? `${knobs} · ${source}` : source };
 }
 
 function toggleRun() {
@@ -678,7 +680,8 @@ function toggleRun() {
   if (S.runs.length >= MAX_RUNS) S.runs.splice(S.runs.findIndex(r => r !== S.running), 1);
   const used = new Set(S.runs.map(r => r.slot));
   let slot = 1; while (used.has(slot)) slot++;
-  const run = { id: S.nextRunId++, slot, label: runLabel(), lessonId: l.id, points: {}, total: 0, visible: true, status: 'running', t0: performance.now() };
+  const { text: label, knobs, source } = runLabel();
+  const run = { id: S.nextRunId++, slot, label, knobs, source, lessonId: l.id, points: {}, total: 0, visible: true, status: 'running', t0: performance.now() };
   S.runs.push(run);
   S.running = run;
   consoleClear();
@@ -839,16 +842,23 @@ function drawChart() {
 
   const text2 = cssVar('--text-3'), grid = cssVar('--grid'), surface = cssVar('--surface');
   const datasets = [];
-  for (const r of S.runs) {
+  // a hovered run (from the runs list) is drawn on top at full strength; the others fade back.
+  // Chart.js paints dataset 0 last, so the hovered run goes first.
+  const hot = S.runs.some(r => r.id === S.hoverRun && r.visible) ? S.hoverRun : null;
+  const ordered = hot ? [...S.runs].sort((a, b) => (b.id === hot) - (a.id === hot)) : S.runs;
+  for (const r of ordered) {
     const pts = r.points[S.metric];
     if (!r.visible || !pts || !pts.length) continue;
-    const color = cssVar(`--series-${r.slot}`);
+    const base = cssVar(`--series-${r.slot}`);
+    const faded = hot && r.id !== hot;
+    const color = faded ? withAlpha(base, 0.18) : base;
+    const width = hot === r.id ? 3 : 2;
     const raw = thin(pts);
     if (S.smooth > 0 && pts.length > 5) {
-      datasets.push({ label: r.label + ' (raw)', data: raw.map(([x, y]) => ({ x, y })), borderColor: withAlpha(color, 0.22), borderWidth: 1, pointRadius: 0, raw: true });
-      datasets.push({ label: r.label, data: thin(smoothed(pts, S.smooth)).map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: surface, pointHoverBorderWidth: 2, pointHoverBackgroundColor: color });
+      datasets.push({ label: r.label + ' (raw)', runId: r.id, data: raw.map(([x, y]) => ({ x, y })), borderColor: withAlpha(base, faded ? 0.06 : 0.22), borderWidth: 1, pointRadius: 0, raw: true });
+      datasets.push({ label: r.label, runId: r.id, data: thin(smoothed(pts, S.smooth)).map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: surface, pointHoverBorderWidth: 2, pointHoverBackgroundColor: base });
     } else {
-      datasets.push({ label: r.label, data: raw.map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: 2, pointRadius: pts.length < 40 ? 2 : 0, pointHoverRadius: 4, pointHoverBackgroundColor: color, pointBackgroundColor: color });
+      datasets.push({ label: r.label, runId: r.id, data: raw.map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: width, pointRadius: pts.length < 40 ? 2 : 0, pointHoverRadius: 4, pointHoverBackgroundColor: base, pointBackgroundColor: color });
     }
   }
   const yType = S.logY ? 'logarithmic' : 'linear';
@@ -859,10 +869,21 @@ function drawChart() {
       options: {
         animation: false, parsing: false, normalized: true, maintainAspectRatio: false,
         interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        // pointing at a curve marks its row in the runs list
+        onHover: (evt, els) => {
+          let best = null, dist = Infinity;
+          for (const el of els) {
+            if (chart.data.datasets[el.datasetIndex].raw) continue;
+            const d = Math.abs(el.element.y - evt.y);
+            if (d < dist) { dist = d; best = chart.data.datasets[el.datasetIndex].runId; }
+          }
+          markRunRow(best);
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
             filter: item => !item.dataset.raw,
+            itemSort: (a, b) => a.parsed.y - b.parsed.y, // lowest (usually best) first
             callbacks: {
               title: items => items.length ? `step ${items[0].parsed.x}` : '',
               label: item => ` ${item.dataset.label}: ${fmtY(item.parsed.y)}`,
@@ -895,11 +916,20 @@ function finalValue(r) {
   return sm[sm.length - 1][1];
 }
 
+function setHoverRun(id) {
+  if (S.hoverRun === id) return;
+  S.hoverRun = id;
+  drawChart();
+}
+function markRunRow(id) {
+  document.querySelectorAll('#runs li').forEach(li => li.classList.toggle('hot', +li.dataset.run === id));
+}
+
 function renderRuns() {
   $('#runs').innerHTML = S.runs.map(r => `
     <li class="${r.visible ? '' : 'hidden-run'}" data-run="${r.id}">
       <span class="swatch" style="background:var(--series-${r.slot})"></span>
-      <span class="label" title="${esc(r.label)} (click to show/hide)">${esc(r.label)}</span>
+      <button class="label" title="${esc(r.label)} (click to show/hide)" aria-pressed="${r.visible}">${r.knobs ? `<b>${esc(r.knobs)}</b> · ` : ''}${esc(r.source)}</button>
       <span class="final" data-final="${r.id}"></span>
       <span class="st">${r.status === 'running' ? '…' : r.status === 'error' ? '⚠' : r.status === 'stopped' ? '■' : ''}</span>
       <button class="x" data-del="${r.id}" aria-label="remove run">×</button>
@@ -1052,13 +1082,21 @@ function bindUi() {
       return;
     }
     const li = e.target.closest('[data-run]');
-    if (li && e.target.classList.contains('label')) {
+    if (li && e.target.closest('.label')) {
       const r = S.runs.find(x => x.id === +li.dataset.run);
       r.visible = !r.visible;
       renderRuns(); drawChart();
     }
   });
   $('#clear-console').addEventListener('click', consoleClear);
+  // hovering or focusing a run isolates its curve
+  const runs = $('#runs');
+  const runAt = (e) => { const li = e.target.closest('[data-run]'); return li ? +li.dataset.run : null; };
+  runs.addEventListener('pointerover', e => setHoverRun(runAt(e)));
+  runs.addEventListener('pointerleave', () => setHoverRun(null));
+  runs.addEventListener('focusin', e => setHoverRun(runAt(e)));
+  runs.addEventListener('focusout', e => { if (!runs.contains(e.relatedTarget)) setHoverRun(null); });
+  $('#chart').addEventListener('pointerleave', () => markRunRow(null));
 }
 
 boot();

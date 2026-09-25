@@ -351,10 +351,13 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; font-size: 13px; color: var(--text-3); }
 .runs { list-style: none; margin: 0; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; max-height: 150px; overflow-y: auto; }
 .runs li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 2px 4px; border-radius: 6px; }
-.runs li:hover { background: var(--surface-2); }
+.runs li:hover, .runs li.hot { background: var(--surface-2); }
+.runs li.hot .label { color: var(--text); }
 .runs li.hidden-run { opacity: .45; }
 .swatch { width: 12px; height: 3px; border-radius: 2px; flex: none; }
-.runs .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); cursor: pointer; }
+.runs .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); cursor: pointer; border: 0; background: none; padding: 0; text-align: left; font-size: inherit; }
+.runs .label b { color: var(--text); font-weight: 600; }
+.runs .label:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
 .runs .final { font: 12px "JetBrains Mono", monospace; color: var(--text); }
 .runs .x { border: 0; background: none; color: var(--text-3); cursor: pointer; padding: 0 4px; }
 .run-table { max-height: 200px; overflow: auto; padding: 6px 10px; }
