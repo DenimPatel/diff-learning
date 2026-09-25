@@ -121,12 +121,83 @@ function bindDisplayPanel() {
   $('#reset-display').addEventListener('click', () => setPrefs({ ...DEFAULT_PREFS, smooth: S.prefs.smooth }));
 }
 
+// ---- drag handles on the pane borders
+const PANE_LIMITS = { nav: [180, 420], lab: [300, 900] };
+const MIN_MAIN = 420;      // the lesson column never gets narrower than this
+const SNAP_CLOSE = 120;    // dragging a pane narrower than this hides it
+const paneWidth = (which) => $('#' + which).getBoundingClientRect().width;
+
+function clampPane(which, w) {
+  const [min, max] = PANE_LIMITS[which];
+  const other = which === 'nav' ? (S.prefs.labHidden ? 0 : paneWidth('lab')) : (S.prefs.navHidden ? 0 : paneWidth('nav'));
+  const cap = Math.min(max, innerWidth * (which === 'lab' ? 0.6 : 0.32), innerWidth - other - MIN_MAIN);
+  return Math.round(Math.max(min, Math.min(cap, w)));
+}
+
+function bindResizers() {
+  document.querySelectorAll('.resizer[data-resize]').forEach(handle => {
+    const which = handle.dataset.resize, key = which + 'W', pane = $('#' + which);
+    const sizeAt = (x) => which === 'nav' ? x : innerWidth - x;
+    handle.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('active');
+      document.documentElement.classList.add('resizing');
+      let want = null, frame = null;
+      const move = ev => {
+        want = sizeAt(ev.clientX);
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = null;
+          document.documentElement.style.setProperty(`--${which}-w`, clampPane(which, want) + 'px');
+          pane.classList.toggle('will-close', want < SNAP_CLOSE);
+        });
+      };
+      const end = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.classList.remove('active');
+        document.documentElement.classList.remove('resizing');
+        pane.classList.remove('will-close');
+        if (frame) cancelAnimationFrame(frame);
+        if (want === null) return;
+        if (want < SNAP_CLOSE) setPrefs({ [which + 'Hidden']: true }); // restores the old width for next time
+        else setPref(key, clampPane(which, want));
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', end, { once: true });
+      handle.addEventListener('pointercancel', end, { once: true });
+    });
+    handle.addEventListener('dblclick', () => setPref(key, null));
+    handle.addEventListener('keydown', e => {
+      const step = { ArrowLeft: -16, ArrowRight: 16 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      setPref(key, clampPane(which, paneWidth(which) + (which === 'nav' ? step : -step)));
+    });
+  });
+  // CodeMirror measures itself only when told; the chart follows its container on its own
+  let frame = null;
+  new ResizeObserver(() => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = null; if (S.editor && S.view === 'playground') S.editor.refresh(); updateResizerAria(); });
+  }).observe($('#main'));
+}
+function updateResizerAria() {
+  document.querySelectorAll('.resizer[data-resize]').forEach(h => {
+    const [min, max] = PANE_LIMITS[h.dataset.resize];
+    h.setAttribute('aria-valuemin', min);
+    h.setAttribute('aria-valuemax', max);
+    h.setAttribute('aria-valuenow', Math.round(paneWidth(h.dataset.resize)));
+  });
+}
+
 // typing in a field or the editor: single-key shortcuts must not fire
 const isTyping = (e) => !!e.target.closest?.('input, select, textarea, [contenteditable], .CodeMirror');
 
 // after a pane changes size: CodeMirror measures itself only when told, Chart.js follows its container
 function layoutChanged() {
-  requestAnimationFrame(() => { if (S.editor) S.editor.refresh(); if (chart) chart.resize(); });
+  requestAnimationFrame(() => { if (S.editor) S.editor.refresh(); if (chart) chart.resize(); updateResizerAria(); });
 }
 
 function rerenderDiffs() {
@@ -802,6 +873,7 @@ function bindPrefControls() {
 function bindUi() {
   bindPrefControls();
   bindDisplayPanel();
+  bindResizers();
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
   $('#nav-toggle').addEventListener('click', toggleNav);

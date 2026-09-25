@@ -120,17 +120,31 @@ button, select, input { font: inherit; color: inherit; }
 /* pane widths are variables so the user can resize them; hidden panes collapse their column */
 :root { --nav-w: 272px; --lab-w: 420px; }
 .layout {
+  --nav-col: min(var(--nav-w), 32vw);
+  --lab-col: min(var(--lab-w), 60vw);
+  position: relative;
   display: grid;
   grid-template-areas: "nav main lab";
-  grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--lab-w);
+  grid-template-columns: var(--nav-col) minmax(0, 1fr) var(--lab-col);
   height: calc(100vh - 52px);
 }
 .nav { grid-area: nav; }
 .main { grid-area: main; }
 .lab { grid-area: lab; }
 .nav-hidden .nav, .lab-hidden .lab, .focus .nav, .focus .lab { display: none; }
-.nav-hidden .layout { grid-template-columns: 0 minmax(0, 1fr) var(--lab-w); }
-.lab-hidden .layout { grid-template-columns: var(--nav-w) minmax(0, 1fr) 0; }
+.nav-hidden .layout { grid-template-columns: 0 minmax(0, 1fr) var(--lab-col); }
+.lab-hidden .layout { grid-template-columns: var(--nav-col) minmax(0, 1fr) 0; }
+
+/* drag handles on the pane borders */
+.resizer { position: absolute; top: 0; bottom: 0; z-index: 10; width: 7px; cursor: col-resize; touch-action: none; }
+.resizer[data-resize="nav"] { left: calc(var(--nav-col) - 4px); }
+.resizer[data-resize="lab"] { right: calc(var(--lab-col) - 3px); }
+.resizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; transition: background .15s, box-shadow .15s; }
+.resizer:hover::after, .resizer:focus-visible::after, .resizing .resizer.active::after { background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.resizer:focus-visible { outline: none; }
+.nav-hidden .resizer[data-resize="nav"], .lab-hidden .resizer[data-resize="lab"], .focus .resizer { display: none; }
+.resizing, .resizing * { cursor: col-resize !important; user-select: none !important; }
+.nav.will-close, .lab.will-close { opacity: .45; }
 .nav-hidden.lab-hidden .layout, .focus .layout { grid-template-columns: 0 minmax(0, 1fr) 0; }
 .nav, .main, .lab { overflow-y: auto; min-width: 0; }
 .nav { border-right: 1px solid var(--border); background: var(--surface); padding: 12px 10px 40px; }
@@ -302,6 +316,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
   .layout, .lab-hidden .layout { grid-template-areas: "nav main" "nav lab"; grid-template-columns: 240px minmax(0, 1fr); height: auto; }
   .nav-hidden .layout, .nav-hidden.lab-hidden .layout, .focus .layout { grid-template-columns: 0 minmax(0, 1fr); }
   .nav { height: calc(100vh - 52px); position: sticky; top: 52px; }
+  .resizer { display: none !important; }
   .main, .lab { overflow: visible; }
   .lab { border-left: 0; border-top: 1px solid var(--border); }
   .tagline { display: none; }
