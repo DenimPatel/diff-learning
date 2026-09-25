@@ -41,7 +41,7 @@ const S = {
   view: 'lesson', lessonId: null,
   compare: '', diffMode: 'changes',
   knobValues: {},           // source key -> {name: value}
-  runs: [], nextRunId: 1, running: null, hoverRun: null,
+  runs: [], nextRunId: 1, running: null, hoverRun: null, zoom: null,
   metric: 'loss', logY: false, smooth: 0.9, showTable: false,
   worker: null, workerReady: false,
   editor: null, pgMode: 'edit', pgKnobs: [],
@@ -839,6 +839,7 @@ function drawChart() {
   if (sel.innerHTML !== optsHtml) sel.innerHTML = optsHtml;
   const hasData = S.runs.some(r => r.points[S.metric]?.length);
   $('#chart-empty').hidden = hasData;
+  $('#zoom-hint').hidden = !!S.zoom || !hasData;
 
   const text2 = cssVar('--text-3'), grid = cssVar('--grid'), surface = cssVar('--surface');
   const datasets = [];
@@ -902,10 +903,122 @@ function drawChart() {
     Object.assign(chart.options.scales.x.ticks, { color: text2 }); chart.options.scales.x.grid.color = grid;
     chart.options.scales.x.title.color = text2;
     Object.assign(chart.options.scales.y.ticks, { color: text2 }); chart.options.scales.y.grid.color = grid;
-    chart.update('none');
   }
+  fitZoom(datasets);
+  chart.update('none');
   if (S.showTable) renderTable();
   updateRunFinals();
+}
+
+// ---------------------------------------------------------------- chart zoom
+// Drag across the chart to zoom into a range of steps; shift-drag pans, ctrl/cmd + wheel zooms,
+// double-click resets. The y-axis refits to what is visible, which is the point: late in training
+// the curves differ by a few hundredths and are flat lines at full scale.
+function setZoom(range) {
+  S.zoom = range;
+  $('#zoom-reset').hidden = !range;
+  $('#zoom-hint').hidden = !!range;
+  drawChart();
+}
+
+function dataExtent() {
+  let lo = Infinity, hi = -Infinity;
+  for (const r of S.runs) {
+    const pts = r.visible && r.points[S.metric];
+    if (pts && pts.length) { lo = Math.min(lo, pts[0][0]); hi = Math.max(hi, pts[pts.length - 1][0]); }
+  }
+  return lo < hi ? { min: lo, max: hi } : null;
+}
+
+// clamp a step range to the data and keep it at least a couple of steps wide; null = everything
+function clampRange(min, max) {
+  const ext = dataExtent();
+  if (!ext) return null;
+  const width = Math.max(2, Math.round(max - min)); // steps are whole numbers
+  if (width >= ext.max - ext.min) return null;
+  min = Math.round(Math.max(ext.min, Math.min(min, ext.max - width)));
+  return { min, max: min + width };
+}
+
+function fitZoom(datasets) {
+  const x = chart.options.scales.x, y = chart.options.scales.y;
+  if (!S.zoom) { delete x.min; delete x.max; delete y.min; delete y.max; return; }
+  x.min = S.zoom.min; x.max = S.zoom.max;
+  let lo = Infinity, hi = -Infinity;
+  for (const d of datasets) {
+    if (d.raw) continue; // fit the curves, not the noise around them
+    for (const p of d.data) if (p.x >= S.zoom.min && p.x <= S.zoom.max && isFinite(p.y)) { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); }
+  }
+  if (lo === Infinity) { delete y.min; delete y.max; return; }
+  if (S.logY) { lo = Math.max(lo, 1e-12); y.min = lo / 1.08; y.max = hi * 1.08; return; }
+  // round out to a tick step so the axis reads 2.5 … 3.4, not 2.492 … 3.329
+  const span = (hi - lo) || Math.abs(hi) * 0.1 || 1;
+  const mag = 10 ** Math.floor(Math.log10(span / 5));
+  const step = [1, 2, 5, 10].map(m => m * mag).find(s => span / s <= 6);
+  y.min = Math.floor(lo / step) * step; y.max = Math.ceil(hi / step) * step;
+  if (y.min === lo) y.min -= step;
+  if (y.max === hi) y.max += step;
+}
+
+function bindChartZoom() {
+  const canvas = $('#chart'), sel = $('#zoom-sel');
+  let drag = null, frame = null;
+  const inArea = (e) => { const a = chart && chart.chartArea; return a && e.offsetX >= a.left && e.offsetX <= a.right && e.offsetY >= a.top && e.offsetY <= a.bottom; };
+  const clampX = (px) => Math.max(chart.chartArea.left, Math.min(chart.chartArea.right, px));
+
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !inArea(e) || !dataExtent()) return;
+    canvas.setPointerCapture(e.pointerId);
+    const pan = e.shiftKey && S.zoom;
+    drag = { x0: e.offsetX, pan, start: S.zoom && { ...S.zoom }, x: e.offsetX };
+    canvas.style.cursor = pan ? 'grabbing' : 'col-resize';
+    chart.options.plugins.tooltip.enabled = false; // it would cover the selection
+    chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+    chart.update('none');
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return;
+    drag.x = clampX(e.offsetX);
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      if (!drag) return;
+      const a = chart.chartArea;
+      if (drag.pan) {
+        const perStep = a.width / (drag.start.max - drag.start.min);
+        const shift = (drag.x0 - drag.x) / perStep;
+        const r = clampRange(drag.start.min + shift, drag.start.max + shift);
+        if (r) { S.zoom = r; drawChart(); }
+      } else {
+        const l = Math.min(drag.x0, drag.x), w = Math.abs(drag.x - drag.x0);
+        Object.assign(sel.style, { left: canvas.offsetLeft + l + 'px', width: w + 'px', top: canvas.offsetTop + a.top + 'px', height: a.height + 'px' });
+        sel.hidden = w < 3;
+      }
+    });
+  });
+  const end = () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    sel.hidden = true;
+    canvas.style.cursor = '';
+    chart.options.plugins.tooltip.enabled = true;
+    if (d.pan || Math.abs(d.x - d.x0) < 6) { chart.update('none'); return; }
+    const sx = chart.scales.x;
+    const a = sx.getValueForPixel(Math.min(d.x0, d.x)), b = sx.getValueForPixel(Math.max(d.x0, d.x));
+    setZoom(clampRange(a, b));
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  canvas.addEventListener('dblclick', () => { if (S.zoom) setZoom(null); });
+  canvas.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey) || !inArea(e)) return;
+    const ext = dataExtent();
+    if (!ext) return;
+    e.preventDefault();
+    const cur = S.zoom || ext, at = chart.scales.x.getValueForPixel(e.offsetX);
+    const f = e.deltaY > 0 ? 1.25 : 0.8;
+    setZoom(clampRange(at - (at - cur.min) * f, at + (cur.max - at) * f));
+  }, { passive: false });
 }
 function fmtY(v) { const a = Math.abs(v); return a !== 0 && (a < 1e-3 || a >= 1e5) ? v.toExponential(1) : String(+v.toPrecision(4)); }
 
@@ -1062,7 +1175,9 @@ function bindUi() {
     if (shortcut) { e.preventDefault(); shortcut(); }
   });
 
-  $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; drawChart(); });
+  $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; setZoom(null); });
+  bindChartZoom();
+  $('#zoom-reset').addEventListener('click', () => setZoom(null));
   $('#smooth').addEventListener('input', e => { S.smooth = +e.target.value; setPref('smooth', S.smooth); drawChart(); });
   $('#logy').addEventListener('change', e => { S.logY = e.target.checked; drawChart(); });
   $('#table-toggle').addEventListener('click', () => {
@@ -1071,7 +1186,7 @@ function bindUi() {
     $('#run-table').hidden = !S.showTable;
     drawChart();
   });
-  $('#clear-runs').addEventListener('click', () => { S.runs = S.runs.filter(r => r === S.running); renderRuns(); drawChart(); });
+  $('#clear-runs').addEventListener('click', () => { S.runs = S.runs.filter(r => r === S.running); renderRuns(); setZoom(null); });
   $('#runs').addEventListener('click', e => {
     const del = e.target.closest('[data-del]');
     if (del) {
