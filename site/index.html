@@ -20,6 +20,7 @@
       root.classList.toggle('nav-hidden', !!p.navHidden);
       root.classList.toggle('lab-hidden', !!p.labHidden);
       root.classList.toggle('focus', !!p.focus);
+      for (const k of ['knobs', 'chart', 'console']) root.classList.toggle(k + '-collapsed', !!p[k + 'Collapsed']);
       if (p.navW) root.style.setProperty('--nav-w', p.navW + 'px');
       if (p.labW) root.style.setProperty('--lab-w', p.labW + 'px');
     } catch (e) {}
@@ -185,8 +186,13 @@
         <span class="lab-source" id="lab-source"></span>
       </div>
 
-      <div class="knobs" id="knobs"></div>
-      <div class="experiments" id="experiments"></div>
+      <section class="knobs-card" aria-label="Knobs">
+        <button class="collapse-btn" data-collapse="knobsCollapsed" aria-controls="knobs-body"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Knobs</button>
+        <div class="knobs-body" id="knobs-body">
+          <div class="knobs" id="knobs"></div>
+          <div class="experiments" id="experiments"></div>
+        </div>
+      </section>
 
       <div class="run-row">
         <button class="btn primary" id="run-btn">
@@ -198,25 +204,37 @@
       </div>
       <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
 
-      <section class="chart-card" aria-label="Training metrics">
-        <div class="chart-controls">
-          <label class="inline-field">metric <select id="metric-select"></select></label>
-          <label class="inline-field">smooth <input type="range" id="smooth" min="0" max="0.99" step="0.01" value="0.9"></label>
-          <label class="check"><input type="checkbox" id="logy"> log y</label>
+      <section class="chart-card" id="chart-card" aria-label="Training metrics">
+        <div class="chart-head">
+          <button class="collapse-btn" data-collapse="chartCollapsed" aria-controls="chart-body"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Chart</button>
           <span class="spacer"></span>
           <button class="btn ghost small" id="table-toggle" aria-pressed="false">table</button>
           <button class="btn ghost small" id="clear-runs">clear</button>
+          <button class="icon-btn small" id="chart-expand" aria-pressed="false" aria-label="Enlarge chart" title="Enlarge chart (Esc to close)">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-        <div class="chart-box"><canvas id="chart" aria-label="Loss curves of your runs" role="img"></canvas>
-          <div class="chart-empty" id="chart-empty">Run the code to see its training curve. Runs stay on the chart so you can compare them.</div>
+        <div class="chart-body" id="chart-body">
+          <div class="chart-controls">
+            <label class="inline-field">metric <select id="metric-select"></select></label>
+            <label class="inline-field">smooth <input type="range" id="smooth" min="0" max="0.99" step="0.01" value="0.9"></label>
+            <label class="check"><input type="checkbox" id="logy"> log y</label>
+          </div>
+          <div class="chart-box"><canvas id="chart" aria-label="Loss curves of your runs" role="img"></canvas>
+            <div class="chart-empty" id="chart-empty">Run the code to see its training curve. Runs stay on the chart so you can compare them.</div>
+          </div>
+          <div class="resizer-h" data-resize-h="chart" role="separator" aria-orientation="horizontal" aria-label="Resize chart (double-click to reset)" tabindex="0"></div>
+          <div class="chart-side">
+            <div class="run-table" id="run-table" hidden></div>
+            <ul class="runs" id="runs"></ul>
+          </div>
         </div>
-        <div class="run-table" id="run-table" hidden></div>
-        <ul class="runs" id="runs"></ul>
       </section>
 
       <section class="console-card" aria-label="Output">
-        <div class="console-head"><span>Output</span><span class="spacer"></span><button class="btn ghost small" id="clear-console">clear</button></div>
+        <div class="console-head"><button class="collapse-btn" data-collapse="consoleCollapsed" aria-controls="console"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Output</button><span class="spacer"></span><button class="btn ghost small" id="clear-console">clear</button></div>
         <pre class="console" id="console"></pre>
+        <div class="resizer-h" data-resize-h="console" role="separator" aria-orientation="horizontal" aria-label="Resize output (double-click to reset)" tabindex="0"></div>
       </section>
     </aside>
   </div>

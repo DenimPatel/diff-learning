@@ -307,11 +307,47 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .status.err { color: var(--bad); }
 .progress { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; margin-top: -6px; }
 .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
-.chart-card, .console-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-.chart-controls, .console-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.chart-card, .console-card { position: relative; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.chart-head, .console-head { display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 4px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 10px 0; font-size: 13px; }
+
+/* collapsible lab sections */
+.collapse-btn { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 3px 6px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+.collapse-btn:hover { background: var(--surface-2); }
+.collapse-btn .chev { color: var(--text-3); transition: transform .15s; }
+.collapse-btn[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.knobs-card .collapse-btn { margin: -4px 0 6px -6px; }
+.knobs-collapsed .knobs-body, .chart-collapsed .chart-body, .console-collapsed .console, .console-collapsed .console-card .resizer-h { display: none; }
+.chart-collapsed .chart-head, .console-collapsed .console-head { border-bottom: 0; }
+.chart-collapsed #table-toggle, .chart-collapsed #clear-runs, .chart-collapsed #chart-expand { display: none; }
+.icon-btn.small { width: 28px; height: 28px; border-radius: 6px; }
+
+/* horizontal drag handles under the chart and the console */
+.resizer-h { position: relative; height: 9px; margin: -4px 0; cursor: row-resize; touch-action: none; z-index: 2; }
+.resizer-h::after { content: ""; position: absolute; left: 50%; top: 3px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px; background: var(--border); transition: background .15s; }
+.resizer-h:hover::after, .resizer-h:focus-visible::after, .resizer-h.active::after { background: var(--accent); }
+.resizer-h:focus-visible { outline: none; }
+.console-card .resizer-h { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; }
+.resizing-h, .resizing-h * { cursor: row-resize !important; user-select: none !important; }
+
+/* enlarged chart: a dialog-like overlay with the runs beside it */
+.chart-card.expanded {
+  position: fixed; inset: 24px; z-index: 50; display: flex; flex-direction: column;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45), 0 12px 40px rgba(0, 0, 0, .3);
+}
+.chart-card.expanded .chart-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); grid-template-rows: auto minmax(0, 1fr); }
+.chart-card.expanded .chart-controls { grid-column: 1 / -1; padding-bottom: 6px; }
+.chart-card.expanded .chart-box { height: auto; }
+.chart-card.expanded .resizer-h { display: none; }
+.chart-card.expanded .chart-side { border-left: 1px solid var(--border); overflow: auto; }
+.chart-card.expanded .runs { max-height: none; }
+.chart-card.expanded #chart-expand { color: var(--accent); }
+.chart-card.expanded .runs .label { white-space: normal; }
+.chart-card.expanded .collapse-btn { pointer-events: none; }
+.chart-card.expanded .collapse-btn .chev { display: none; }
 .chart-controls input[type=range] { width: 70px; accent-color: var(--accent); }
 .check { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--text-3); }
-.chart-box { position: relative; height: 220px; padding: 8px; }
+.chart-box { position: relative; height: var(--chart-h, 220px); padding: 8px; }
 .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; font-size: 13px; color: var(--text-3); }
 .runs { list-style: none; margin: 0; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; max-height: 150px; overflow-y: auto; }
 .runs li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 2px 4px; border-radius: 6px; }
@@ -325,7 +361,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .run-table table { border-collapse: collapse; width: 100%; font: 12px "JetBrains Mono", monospace; }
 .run-table th, .run-table td { border-bottom: 1px solid var(--border); padding: 2px 6px; text-align: right; }
 .run-table th:first-child, .run-table td:first-child { text-align: left; }
-.console { margin: 0; padding: 8px 10px; height: 220px; overflow: auto; font-size: calc(var(--code-size, 12.5px) - .5px); line-height: 1.45; background: var(--code-bg); border-radius: 0 0 10px 10px; white-space: pre-wrap; word-break: break-word; }
+.console { margin: 0; padding: 8px 10px; height: var(--console-h, 220px); overflow: auto; font-size: calc(var(--code-size, 12.5px) - .5px); line-height: 1.45; background: var(--code-bg); border-radius: 0 0 10px 10px; white-space: pre-wrap; word-break: break-word; }
 .console .err { color: var(--bad); }
 .console .sys { color: var(--text-3); }
 
@@ -361,6 +397,9 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
   .main { --main-pt: 18px; padding: var(--main-pt) 16px 40px; }
   h1 { font-size: 24px; }
   .knob { grid-template-columns: 100px 1fr 60px; }
+  .chart-card.expanded { inset: 8px; }
+  .chart-card.expanded .chart-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .chart-card.expanded .chart-side { border-left: 0; border-top: 1px solid var(--border); max-height: 30vh; }
   .brand-name { display: none; }
   .topbar { gap: 4px; }
   .tabs { margin-right: 4px; }

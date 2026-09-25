@@ -17,8 +17,12 @@ const DEFAULT_PREFS = {
   navHidden: false, labHidden: false, navW: null, labW: null, focus: false,
   ctxLines: 3, diffWrap: false, codeSize: 12.5, contentWidth: 'normal', proseSize: 'm',
   smooth: 0.9,
+  knobsCollapsed: false, chartCollapsed: false, consoleCollapsed: false, chartH: 220, consoleH: 220,
 };
-const PREF_CLASSES = { navHidden: 'nav-hidden', labHidden: 'lab-hidden', focus: 'focus', diffWrap: 'diff-wrap' };
+const PREF_CLASSES = {
+  navHidden: 'nav-hidden', labHidden: 'lab-hidden', focus: 'focus', diffWrap: 'diff-wrap',
+  knobsCollapsed: 'knobs-collapsed', chartCollapsed: 'chart-collapsed', consoleCollapsed: 'console-collapsed',
+};
 const CONTENT_WIDTHS = { narrow: '720px', normal: '920px', wide: '1200px', full: 'none' };
 const PROSE_SIZES = { s: '14px', m: '15px', l: '17px' };
 const DIFF_PREFS = ['ctxLines'];
@@ -54,6 +58,8 @@ function applyPrefs() {
     '--code-size': p.codeSize + 'px',
     '--content-width': CONTENT_WIDTHS[p.contentWidth],
     '--prose-size': PROSE_SIZES[p.proseSize],
+    '--chart-h': p.chartH + 'px',
+    '--console-h': p.consoleH + 'px',
   };
   for (const [k, v] of Object.entries(vars)) v ? root.style.setProperty(k, v) : root.style.removeProperty(k);
   syncPrefControls();
@@ -84,6 +90,7 @@ function syncPrefControls() {
     t.querySelector('[data-expand]').hidden = noFolds;
   });
   if (S.editor) S.editor.setOption('lineWrapping', !!S.prefs.diffWrap);
+  document.querySelectorAll('[data-collapse]').forEach(b => b.setAttribute('aria-expanded', String(!S.prefs[b.dataset.collapse])));
   const preset = activePreset();
   document.querySelectorAll('[data-preset]').forEach(b => { b.classList.toggle('active', b.dataset.preset === preset); b.setAttribute('aria-pressed', String(b.dataset.preset === preset)); });
   syncPaneToggles();
@@ -213,6 +220,59 @@ function bindResizers() {
     frame = requestAnimationFrame(() => { frame = null; if (S.editor && S.view === 'playground') S.editor.refresh(); updateResizerAria(); });
   }).observe($('#main'));
 }
+// heights of the chart and the console (drag the handle under each)
+const HEIGHT_LIMITS = { chart: [140, 0.75], console: [80, 0.75] }; // min px, max fraction of the window
+function clampHeight(which, h) {
+  const [min, maxFrac] = HEIGHT_LIMITS[which];
+  return Math.round(Math.max(min, Math.min(innerHeight * maxFrac, h)));
+}
+function bindHeightResizers() {
+  document.querySelectorAll('[data-resize-h]').forEach(handle => {
+    const which = handle.dataset.resizeH, key = which + 'H';
+    handle.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('active');
+      document.documentElement.classList.add('resizing-h');
+      const y0 = e.clientY, h0 = S.prefs[key];
+      let h = null, frame = null;
+      const move = ev => {
+        h = clampHeight(which, h0 + ev.clientY - y0);
+        if (!frame) frame = requestAnimationFrame(() => { frame = null; document.documentElement.style.setProperty(`--${which}-h`, h + 'px'); });
+      };
+      const end = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.classList.remove('active');
+        document.documentElement.classList.remove('resizing-h');
+        if (frame) cancelAnimationFrame(frame);
+        if (h !== null) setPref(key, h);
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', end, { once: true });
+      handle.addEventListener('pointercancel', end, { once: true });
+    });
+    handle.addEventListener('dblclick', () => setPref(key, DEFAULT_PREFS[key]));
+    handle.addEventListener('keydown', e => {
+      const step = { ArrowUp: -16, ArrowDown: 16 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      setPref(key, clampHeight(which, S.prefs[key] + step));
+    });
+  });
+}
+
+// the enlarged chart is an overlay; Esc or a click outside closes it
+function setChartExpanded(on) {
+  const card = $('#chart-card');
+  if (card.classList.contains('expanded') === on) return;
+  card.classList.toggle('expanded', on);
+  $('#chart-expand').setAttribute('aria-pressed', String(on));
+  $('#chart-expand').title = on ? 'Back to the lab (Esc)' : 'Enlarge chart (Esc to close)';
+  if (on) card.setAttribute('role', 'dialog'); else card.removeAttribute('role');
+  if (chart) requestAnimationFrame(() => chart.resize());
+}
+
 function updateResizerAria() {
   document.querySelectorAll('.resizer[data-resize]').forEach(h => {
     const [min, max] = PANE_LIMITS[h.dataset.resize];
@@ -904,6 +964,12 @@ function bindUi() {
   bindPrefControls();
   bindDisplayPanel();
   bindResizers();
+  bindHeightResizers();
+  document.querySelectorAll('[data-collapse]').forEach(b => b.addEventListener('click', () => setPref(b.dataset.collapse, !S.prefs[b.dataset.collapse])));
+  $('#chart-expand').addEventListener('click', () => setChartExpanded(!$('#chart-card').classList.contains('expanded')));
+  document.addEventListener('pointerdown', e => {
+    if ($('#chart-card').classList.contains('expanded') && !e.target.closest('#chart-card')) setChartExpanded(false);
+  });
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
   $('#nav-toggle').addEventListener('click', toggleNav);
@@ -951,12 +1017,14 @@ function bindUi() {
   $('#run-btn').addEventListener('click', toggleRun);
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); return; }
-    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || $('#shortcuts').open) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || $('#shortcuts').open) return;
     if (e.key === 'Escape') {
-      if (!$('#display-panel').hidden) setDisplayPanel(false);
-      else if (S.prefs.focus) setPref('focus', false);
+      if ($('#chart-card').classList.contains('expanded')) setChartExpanded(false);
+      else if (!$('#display-panel').hidden) setDisplayPanel(false);
+      else if (S.prefs.focus && !isTyping(e)) setPref('focus', false);
       return;
     }
+    if (isTyping(e)) return;
     const shortcut = {
       '[': toggleNav, ']': toggleLab, '\\': toggleFocus, '?': showShortcuts,
       j: () => goLesson(1), k: () => goLesson(-1),
