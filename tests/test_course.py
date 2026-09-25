@@ -71,6 +71,39 @@ console.log(JSON.stringify(out));
         assert [k["value"] for k in js_applied] == [k["value"] for k in l["params"]], l["id"]
 
 
+DIFF_JS = r"""
+const D = require(DIFF_JS_PATH);
+const out = {};
+// splitting highlighted HTML keeps spans balanced on every line
+out.split = D.splitLines('<span class="s">"a\nb"</span>\nx');
+// removed lines sit next to the added lines that replaced them
+out.pairs = D.pairRows([{type:'ctx',n:0},{type:'del',n:1},{type:'del',n:2},{type:'add',n:3},{type:'ctx',n:4},{type:'add',n:5}])
+  .map(p => [p.type, p.left && p.left.n, p.right && p.right.n]);
+out.number = D.wordRanges('lr = 0.01  # step', 'lr = 3e-4  # step');
+out.appended = D.wordRanges('def gpt(token_id, pos_id):', 'def gpt(token_id, pos_id, keys, values):');
+out.rewritten = D.wordRanges('x = foo(a, b)', 'return None');
+out.entity = D.markRanges('<span class="k">if</span> a &lt; b:', [[3, 8]]);
+out.across = D.markRanges('x = <span class="s">"ab"</span> + 1', [[2, 10]]);
+out.none = D.markRanges('<b>x</b>', []);
+console.log(JSON.stringify(out));
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+def test_js_diff_helpers():
+    js = DIFF_JS.replace("DIFF_JS_PATH", json.dumps(str(ROOT / "site" / "diff.js")))
+    out = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
+    assert out["split"] == ['<span class="s">"a</span>', '<span class="s">b"</span>', "x"]
+    assert out["pairs"] == [["ctx", 0, 0], ["change", 1, 3], ["change", 2, None], ["ctx", 4, 4], ["change", None, 5]]
+    assert out["number"] == {"old": [[5, 9]], "new": [[5, 9]]}  # the whole number, not its digits
+    assert out["appended"] == {"old": [], "new": [[24, 38]]}  # ", keys, values" as one highlight
+    assert out["rewritten"] is None  # too different: no word highlights
+    assert out["entity"] == '<span class="k">if</span> <mark class="wd">a &lt; b</mark>:'  # &lt; is one character
+    # marks close and reopen around syntax spans, so nesting stays valid and colors survive
+    assert out["across"] == 'x <mark class="wd">= </mark><span class="s"><mark class="wd">"ab"</mark></span><mark class="wd"> +</mark> 1'
+    assert out["none"] == "<b>x</b>"
+
+
 @pytest.mark.parametrize("lesson", LESSONS, ids=[l["id"] for l in LESSONS])
 def test_lesson_runs(lesson, tmp_path):
     names = {k["name"] for k in lesson["params"]}
@@ -103,5 +136,5 @@ def test_build(tmp_path):
     course = build(tmp_path / "dist")
     bundle = json.loads((tmp_path / "dist" / "course.json").read_text())
     assert len(bundle["lessons"]) == len(course["lessons"])
-    for f in ["index.html", "app.js", "params.js", "worker.js", "styles.css", "data/names.txt"]:
+    for f in ["index.html", "app.js", "params.js", "diff.js", "worker.js", "styles.css", "data/names.txt"]:
         assert (tmp_path / "dist" / f).exists(), f

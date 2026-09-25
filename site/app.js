@@ -11,18 +11,303 @@ const store = {
   del(key) { try { localStorage.removeItem(key); } catch (e) { /* ignore */ } },
 };
 
+// Display preferences: one object in localStorage, applied as classes and CSS variables on <html>.
+// navW/labW are null until the user drags a pane, so the CSS defaults (and breakpoints) apply.
+const DEFAULT_PREFS = {
+  navHidden: false, labHidden: false, navW: null, labW: null, focus: false,
+  ctxLines: 3, diffWrap: false, diffLayout: 'unified', wordDiff: true, codeSize: 12.5, contentWidth: 'normal', proseSize: 'm',
+  smooth: 0.9,
+  knobsCollapsed: false, chartCollapsed: false, consoleCollapsed: false, chartH: 220, consoleH: 220,
+};
+const PREF_CLASSES = {
+  navHidden: 'nav-hidden', labHidden: 'lab-hidden', focus: 'focus', diffWrap: 'diff-wrap',
+  knobsCollapsed: 'knobs-collapsed', chartCollapsed: 'chart-collapsed', consoleCollapsed: 'console-collapsed',
+};
+const CONTENT_WIDTHS = { narrow: '720px', normal: '920px', wide: '1200px', full: 'none' };
+const PROSE_SIZES = { s: '14px', m: '15px', l: '17px' };
+const DIFF_PREFS = ['ctxLines', 'diffLayout', 'wordDiff'];
+const LAYOUT_PREFS = ['navHidden', 'labHidden', 'navW', 'labW', 'focus', 'codeSize', 'contentWidth'];
+
+function loadPrefs() {
+  const saved = store.get('dl-prefs', null);
+  const prefs = { ...DEFAULT_PREFS, ...(saved && typeof saved === 'object' ? saved : {}) };
+  if (!saved) prefs.smooth = store.get('dl-smooth', DEFAULT_PREFS.smooth); // older key
+  return prefs;
+}
+
 const MAX_RUNS = 8; // one per categorical color slot
 const S = {
   course: null, byId: {}, order: [],
   view: 'lesson', lessonId: null,
   compare: '', diffMode: 'changes',
   knobValues: {},           // source key -> {name: value}
-  runs: [], nextRunId: 1, running: null,
+  runs: [], nextRunId: 1, running: null, hoverRun: null, zoom: null,
   metric: 'loss', logY: false, smooth: 0.9, showTable: false,
   worker: null, workerReady: false,
   editor: null, pgMode: 'edit', pgKnobs: [],
   done: new Set(store.get('dl-done', [])),
+  prefs: loadPrefs(),
 };
+
+function applyPrefs() {
+  const root = document.documentElement, p = S.prefs;
+  for (const [key, cls] of Object.entries(PREF_CLASSES)) root.classList.toggle(cls, !!p[key]);
+  const vars = {
+    '--nav-w': p.navW && p.navW + 'px',
+    '--lab-w': p.labW && p.labW + 'px',
+    '--code-size': p.codeSize + 'px',
+    '--content-width': CONTENT_WIDTHS[p.contentWidth],
+    '--prose-size': PROSE_SIZES[p.proseSize],
+    '--chart-h': p.chartH + 'px',
+    '--console-h': p.consoleH + 'px',
+  };
+  for (const [k, v] of Object.entries(vars)) v ? root.style.setProperty(k, v) : root.style.removeProperty(k);
+  syncPrefControls();
+}
+
+function setPrefs(changes) {
+  Object.assign(S.prefs, changes);
+  store.set('dl-prefs', S.prefs);
+  applyPrefs();
+  const keys = Object.keys(changes);
+  if (keys.some(k => DIFF_PREFS.includes(k))) rerenderDiffs();
+  if (keys.some(k => LAYOUT_PREFS.includes(k))) layoutChanged();
+}
+function setPref(key, value) { setPrefs({ [key]: value }); }
+
+// reflect prefs in whatever controls show them
+function syncPrefControls() {
+  document.querySelectorAll('[data-pref]').forEach(el => {
+    const v = S.prefs[el.dataset.pref];
+    if (el.type === 'checkbox') el.checked = 'invert' in el.dataset ? !v : !!v;
+    else if (el.classList.contains('seg-btn')) el.classList.toggle('active', String(v) === el.dataset.value);
+    else el.value = v;
+  });
+  // context and expand-all only mean something when the diff folds unchanged lines
+  document.querySelectorAll('.diff-tools').forEach(t => {
+    const noDiff = t.classList.contains('pg-tools') && S.pgMode !== 'diff'; // the editor is showing
+    const noFolds = noDiff || (!t.classList.contains('pg-tools') && S.diffMode === 'full');
+    t.querySelectorAll('.diff-only').forEach(x => { x.hidden = noDiff; });
+    t.querySelector('.ctx-field').hidden = noFolds;
+    t.querySelector('[data-expand]').hidden = noFolds;
+  });
+  if (S.editor) S.editor.setOption('lineWrapping', !!S.prefs.diffWrap);
+  document.querySelectorAll('[data-collapse]').forEach(b => b.setAttribute('aria-expanded', String(!S.prefs[b.dataset.collapse])));
+  const preset = activePreset();
+  document.querySelectorAll('[data-preset]').forEach(b => { b.classList.toggle('active', b.dataset.preset === preset); b.setAttribute('aria-pressed', String(b.dataset.preset === preset)); });
+  syncPaneToggles();
+}
+
+// on phones the lesson list is a drawer; elsewhere it's a pane the user can hide
+const isDrawer = () => matchMedia('(max-width: 760px)').matches;
+function toggleNav() {
+  if (isDrawer()) { document.body.classList.toggle('nav-open'); syncPaneToggles(); }
+  else if (S.prefs.focus) setPrefs({ focus: false, navHidden: false });
+  else setPref('navHidden', !S.prefs.navHidden);
+}
+function toggleLab() {
+  if (S.prefs.focus) setPrefs({ focus: false, labHidden: false });
+  else setPref('labHidden', !S.prefs.labHidden);
+}
+function toggleFocus() { setPref('focus', !S.prefs.focus); }
+
+// one click between reading (no lab) and experimenting (wide lab)
+const PRESETS = {
+  read: () => ({ navHidden: false, labHidden: true, focus: false }),
+  balanced: () => ({ navHidden: false, labHidden: false, focus: false, navW: null, labW: null }),
+  experiment: () => ({ navHidden: true, labHidden: false, focus: false, labW: Math.min(900, Math.round(innerWidth * 0.55), innerWidth - MIN_MAIN) }),
+};
+function activePreset() {
+  const p = S.prefs;
+  if (p.focus) return null;
+  if (!p.navHidden && p.labHidden) return 'read';
+  if (!p.navHidden && !p.labHidden && p.navW === null && p.labW === null) return 'balanced';
+  if (p.navHidden && !p.labHidden) return 'experiment';
+  return null;
+}
+
+function goLesson(delta) {
+  const id = S.order[S.order.indexOf(S.lessonId) + delta];
+  if (id) location.hash = `#/${S.view}/${id}`;
+}
+function showShortcuts() { setDisplayPanel(false); const d = $('#shortcuts'); if (!d.open) d.showModal(); }
+function syncPaneToggles() {
+  const navOpen = isDrawer() ? document.body.classList.contains('nav-open') : !S.prefs.navHidden && !S.prefs.focus;
+  const labOpen = !S.prefs.labHidden && !S.prefs.focus;
+  const nav = $('#nav-toggle'), lab = $('#lab-toggle');
+  nav.setAttribute('aria-expanded', String(navOpen));
+  nav.title = `${navOpen ? 'Hide' : 'Show'} lessons  [`;
+  lab.setAttribute('aria-expanded', String(labOpen));
+  lab.title = `${labOpen ? 'Hide' : 'Show'} the lab  ]`;
+}
+
+// ---- display panel (a popover under the top-bar button)
+function setDisplayPanel(open) {
+  $('#display-panel').hidden = !open;
+  $('#display-btn').setAttribute('aria-expanded', String(open));
+  if (open) $('#display-panel').querySelector('button, input')?.focus();
+}
+function bindDisplayPanel() {
+  $('#display-btn').addEventListener('click', () => setDisplayPanel($('#display-panel').hidden));
+  document.addEventListener('pointerdown', e => {
+    if (!$('#display-panel').hidden && !e.target.closest('.popover-anchor')) setDisplayPanel(false);
+  });
+  $('#display-panel').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); setDisplayPanel(false); $('#display-btn').focus(); }
+  });
+  $('#reset-display').addEventListener('click', () => setPrefs({ ...DEFAULT_PREFS, smooth: S.prefs.smooth }));
+  $('#show-shortcuts').addEventListener('click', showShortcuts);
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setPrefs(PRESETS[b.dataset.preset]())));
+}
+
+// ---- drag handles on the pane borders
+const PANE_LIMITS = { nav: [180, 420], lab: [300, 900] };
+const MIN_MAIN = 420;      // the lesson column never gets narrower than this
+const SNAP_CLOSE = 120;    // dragging a pane narrower than this hides it
+const paneWidth = (which) => $('#' + which).getBoundingClientRect().width;
+
+function clampPane(which, w) {
+  const [min, max] = PANE_LIMITS[which];
+  const other = which === 'nav' ? (S.prefs.labHidden ? 0 : paneWidth('lab')) : (S.prefs.navHidden ? 0 : paneWidth('nav'));
+  const cap = Math.min(max, innerWidth * (which === 'lab' ? 0.6 : 0.32), innerWidth - other - MIN_MAIN);
+  return Math.round(Math.max(min, Math.min(cap, w)));
+}
+
+function bindResizers() {
+  document.querySelectorAll('.resizer[data-resize]').forEach(handle => {
+    const which = handle.dataset.resize, key = which + 'W', pane = $('#' + which);
+    const sizeAt = (x) => which === 'nav' ? x : innerWidth - x;
+    handle.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('active');
+      document.documentElement.classList.add('resizing');
+      let want = null, frame = null;
+      const move = ev => {
+        want = sizeAt(ev.clientX);
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = null;
+          document.documentElement.style.setProperty(`--${which}-w`, clampPane(which, want) + 'px');
+          pane.classList.toggle('will-close', want < SNAP_CLOSE);
+        });
+      };
+      const end = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.classList.remove('active');
+        document.documentElement.classList.remove('resizing');
+        pane.classList.remove('will-close');
+        if (frame) cancelAnimationFrame(frame);
+        if (want === null) return;
+        if (want < SNAP_CLOSE) setPrefs({ [which + 'Hidden']: true }); // restores the old width for next time
+        else setPref(key, clampPane(which, want));
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', end, { once: true });
+      handle.addEventListener('pointercancel', end, { once: true });
+    });
+    handle.addEventListener('dblclick', () => setPref(key, null));
+    handle.addEventListener('keydown', e => {
+      const step = { ArrowLeft: -16, ArrowRight: 16 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      setPref(key, clampPane(which, paneWidth(which) + (which === 'nav' ? step : -step)));
+    });
+  });
+  // CodeMirror measures itself only when told; the chart follows its container on its own
+  let frame = null;
+  new ResizeObserver(() => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      if (S.editor && S.view === 'playground') S.editor.refresh();
+      updateResizerAria();
+      // split diffs fall back to unified in a narrow pane: re-render when the width crosses the line
+      const el = S.view === 'lesson' ? $('#diff') : $('#pg-diff');
+      if (S.prefs.diffLayout === 'split' && el.querySelector('table') && (el.clientWidth >= SPLIT_MIN_WIDTH) !== el.classList.contains('split')) rerenderDiffs();
+    });
+  }).observe($('#main'));
+}
+// heights of the chart and the console (drag the handle under each)
+const HEIGHT_LIMITS = { chart: [140, 0.75], console: [80, 0.75] }; // min px, max fraction of the window
+function clampHeight(which, h) {
+  const [min, maxFrac] = HEIGHT_LIMITS[which];
+  return Math.round(Math.max(min, Math.min(innerHeight * maxFrac, h)));
+}
+function bindHeightResizers() {
+  document.querySelectorAll('[data-resize-h]').forEach(handle => {
+    const which = handle.dataset.resizeH, key = which + 'H';
+    handle.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('active');
+      document.documentElement.classList.add('resizing-h');
+      const y0 = e.clientY, h0 = S.prefs[key];
+      let h = null, frame = null;
+      const move = ev => {
+        h = clampHeight(which, h0 + ev.clientY - y0);
+        if (!frame) frame = requestAnimationFrame(() => { frame = null; document.documentElement.style.setProperty(`--${which}-h`, h + 'px'); });
+      };
+      const end = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.classList.remove('active');
+        document.documentElement.classList.remove('resizing-h');
+        if (frame) cancelAnimationFrame(frame);
+        if (h !== null) setPref(key, h);
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', end, { once: true });
+      handle.addEventListener('pointercancel', end, { once: true });
+    });
+    handle.addEventListener('dblclick', () => setPref(key, DEFAULT_PREFS[key]));
+    handle.addEventListener('keydown', e => {
+      const step = { ArrowUp: -16, ArrowDown: 16 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      setPref(key, clampHeight(which, S.prefs[key] + step));
+    });
+  });
+}
+
+// the enlarged chart is an overlay; Esc or a click outside closes it
+function setChartExpanded(on) {
+  const card = $('#chart-card');
+  if (card.classList.contains('expanded') === on) return;
+  card.classList.toggle('expanded', on);
+  $('#chart-expand').setAttribute('aria-pressed', String(on));
+  $('#chart-expand').title = on ? 'Back to the lab (Esc)' : 'Enlarge chart (Esc to close)';
+  if (on) card.setAttribute('role', 'dialog'); else card.removeAttribute('role');
+  if (chart) requestAnimationFrame(() => chart.resize());
+}
+
+function updateResizerAria() {
+  document.querySelectorAll('.resizer[data-resize]').forEach(h => {
+    const [min, max] = PANE_LIMITS[h.dataset.resize];
+    h.setAttribute('aria-valuemin', min);
+    h.setAttribute('aria-valuemax', max);
+    h.setAttribute('aria-valuenow', Math.round(paneWidth(h.dataset.resize)));
+  });
+}
+
+// typing in a field or the editor: single-key shortcuts must not fire
+const isTyping = (e) => !!e.target.closest?.('input, select, textarea, [contenteditable], .CodeMirror');
+
+// after a pane changes size: CodeMirror measures itself only when told, Chart.js follows its container
+function layoutChanged() {
+  requestAnimationFrame(() => {
+    if (S.editor) S.editor.refresh();
+    if (chart) chart.resize();
+    updateResizerAria();
+  });
+}
+
+function rerenderDiffs() {
+  if (!S.lessonId) return;
+  if (S.view === 'lesson') renderLessonDiff();
+  else if (S.pgMode === 'diff') setPgMode('diff');
+}
 
 // ---------------------------------------------------------------- boot
 async function boot() {
@@ -33,8 +318,9 @@ async function boot() {
     return;
   }
   for (const l of S.course.lessons) { S.byId[l.id] = l; S.order.push(l.id); }
-  S.smooth = store.get('dl-smooth', 0.9);
+  S.smooth = S.prefs.smooth;
   $('#smooth').value = S.smooth;
+  applyPrefs();
   buildNav();
   bindUi();
   window.addEventListener('hashchange', route);
@@ -59,7 +345,7 @@ function route() {
   S.lessonId = id;
   store.set('dl-last', id);
   document.body.classList.remove('nav-open');
-  $('#nav-toggle').setAttribute('aria-expanded', 'false');
+  syncPaneToggles();
 
   $('#tab-lesson').href = '#/lesson/' + id;
   $('#tab-playground').href = '#/playground/' + id;
@@ -161,17 +447,7 @@ function renderLessonDiff() {
 const hlCache = new Map();
 function highlightLines(code) {
   if (hlCache.has(code)) return hlCache.get(code);
-  const html = hljs.highlight(code, { language: 'python', ignoreIllegals: true }).value;
-  // split into lines, closing and re-opening spans that cross a newline (e.g. docstrings)
-  const lines = []; const stack = []; let cur = '';
-  const re = /(<span[^>]*>)|(<\/span>)|(\n)|([^<\n]+)/g; let m;
-  while ((m = re.exec(html))) {
-    if (m[1]) { stack.push(m[1]); cur += m[1]; }
-    else if (m[2]) { stack.pop(); cur += m[2]; }
-    else if (m[3]) { lines.push(cur + '</span>'.repeat(stack.length)); cur = stack.join(''); }
-    else cur += m[4];
-  }
-  lines.push(cur);
+  const lines = DiffView.splitLines(hljs.highlight(code, { language: 'python', ignoreIllegals: true }).value);
   if (hlCache.size > 200) hlCache.clear();
   hlCache.set(code, lines);
   return lines;
@@ -179,22 +455,46 @@ function highlightLines(code) {
 
 function diffRows(oldCode, newCode) {
   const oldHl = highlightLines(oldCode), newHl = highlightLines(newCode);
+  const oldText = oldCode.split('\n'), newText = newCode.split('\n');
   const rows = []; let o = 0, n = 0;
   for (const part of Diff.diffLines(oldCode, newCode)) {
     const count = part.value.endsWith('\n') ? part.value.split('\n').length - 1 : part.value.split('\n').length;
     for (let k = 0; k < count; k++) {
-      if (part.added) rows.push({ type: 'add', newNo: ++n, html: newHl[n - 1] });
-      else if (part.removed) rows.push({ type: 'del', oldNo: ++o, html: oldHl[o - 1] });
-      else rows.push({ type: 'ctx', oldNo: ++o, newNo: ++n, html: newHl[n - 1] });
+      if (part.added) { n++; rows.push({ type: 'add', newNo: n, html: newHl[n - 1], text: newText[n - 1] }); }
+      else if (part.removed) { o++; rows.push({ type: 'del', oldNo: o, html: oldHl[o - 1], text: oldText[o - 1] }); }
+      else { o++; n++; rows.push({ type: 'ctx', oldNo: o, newNo: n, html: newHl[n - 1], text: newText[n - 1] }); }
     }
   }
   return rows;
 }
 
-function rowHtml(r) {
-  const mark = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' ';
-  return `<tr class="${r.type}"><td class="ln">${r.oldNo || ''}</td><td class="ln">${r.newNo || ''}</td><td class="mk">${mark}</td><td>${r.html || ' '}</td></tr>`;
+// Highlight the words that changed between a removed line and the added line that replaced it.
+// Pairs come from DiffView.pairRows; lines too different to compare keep their plain colors.
+function markWordChanges(pairs) {
+  if (!S.prefs.wordDiff) return;
+  for (const p of pairs) {
+    if (p.type !== 'change' || !p.left || !p.right) continue;
+    const r = DiffView.wordRanges(p.left.text, p.right.text);
+    if (!r) continue;
+    // rows are fresh objects from diffRows, so marking in place also marks the unified view
+    p.left.html = DiffView.markRanges(p.left.html, r.old);
+    p.right.html = DiffView.markRanges(p.right.html, r.new);
+  }
 }
+
+const MARKS = { add: '+', del: '−', ctx: ' ' };
+function rowHtml(r) {
+  return `<tr class="${r.type}"><td class="ln">${r.oldNo || ''}</td><td class="ln">${r.newNo || ''}</td><td class="mk">${MARKS[r.type]}</td><td>${r.html || ' '}</td></tr>`;
+}
+function pairHtml(p) {
+  const side = (r, no) => r
+    ? `<td class="ln ${r.type}">${r[no]}</td><td class="mk ${r.type}">${MARKS[r.type]}</td><td class="code ${r.type}">${r.html || ' '}</td>`
+    : '<td class="ln none"></td><td class="mk none"></td><td class="code none"></td>';
+  return `<tr class="${p.type}">${side(p.left, 'oldNo')}${side(p.right, 'newNo')}</tr>`;
+}
+
+// side-by-side needs room for two columns of code; narrow panes fall back to unified
+const SPLIT_MIN_WIDTH = 640;
 
 function renderDiff(el, oldCode, newCode, mode, statsEl) {
   const rows = diffRows(oldCode, newCode);
@@ -202,33 +502,42 @@ function renderDiff(el, oldCode, newCode, mode, statsEl) {
   if (statsEl) statsEl.innerHTML = `<span class="plus">+${adds}</span> <span class="minus">−${dels}</span>`;
   if (!rows.length) { el.innerHTML = '<div class="empty">An empty file.</div>'; return; }
   if (mode === 'changes' && !adds && !dels) { el.innerHTML = '<div class="empty">No changes: the code is identical.</div>'; return; }
-  const CTX = 3;
+
+  const split = S.prefs.diffLayout === 'split' && (el.clientWidth || el.parentElement.clientWidth) >= SPLIT_MIN_WIDTH;
+  const pairs = DiffView.pairRows(rows);
+  markWordChanges(pairs);
+  const units = split ? pairs : rows;
+  const toHtml = split ? pairHtml : rowHtml, cols = split ? 6 : 4;
+
+  const CTX = S.prefs.ctxLines === 'all' ? Infinity : S.prefs.ctxLines;
   const out = [];
   let i = 0;
-  while (i < rows.length) {
-    if (mode !== 'changes' || rows[i].type !== 'ctx') { out.push(rowHtml(rows[i++])); continue; }
+  while (i < units.length) {
+    if (mode !== 'changes' || units[i].type !== 'ctx') { out.push(toHtml(units[i++])); continue; }
     let j = i;
-    while (j < rows.length && rows[j].type === 'ctx') j++;
-    const run = rows.slice(i, j);
-    const keepHead = i === 0 ? 0 : CTX, keepTail = j === rows.length ? 0 : CTX;
+    while (j < units.length && units[j].type === 'ctx') j++;
+    const run = units.slice(i, j);
+    const keepHead = i === 0 ? 0 : CTX, keepTail = j === units.length ? 0 : CTX;
     if (run.length > keepHead + keepTail + 2) {
       const hidden = run.slice(keepHead, run.length - keepTail);
-      out.push(...run.slice(0, keepHead).map(rowHtml));
-      out.push(`</tbody><tbody class="fold-body"><tr class="fold" tabindex="0" role="button"><td colspan="4">⋯ ${hidden.length} unchanged lines (show)</td></tr></tbody>` +
-        `<tbody hidden>${hidden.map(rowHtml).join('')}</tbody><tbody>`);
-      out.push(...run.slice(run.length - keepTail).map(rowHtml));
+      out.push(...run.slice(0, keepHead).map(toHtml));
+      out.push(`</tbody><tbody class="fold-body"><tr class="fold" tabindex="0" role="button"><td colspan="${cols}">⋯ ${hidden.length} unchanged lines (show)</td></tr></tbody>` +
+        `<tbody hidden>${hidden.map(toHtml).join('')}</tbody><tbody>`);
+      out.push(...run.slice(run.length - keepTail).map(toHtml));
     } else {
-      out.push(...run.map(rowHtml));
+      out.push(...run.map(toHtml));
     }
     i = j;
   }
-  el.innerHTML = `<table><tbody>${out.join('')}</tbody></table>`;
+  const colgroup = split ? '<colgroup><col class="c-ln"><col class="c-mk"><col><col class="c-ln"><col class="c-mk"><col></colgroup>' : '';
+  el.classList.toggle('split', split);
+  el.innerHTML = `<table>${colgroup}<tbody>${out.join('')}</tbody></table>`;
   el.querySelectorAll('tr.fold').forEach(tr => {
-    const open = () => { const body = tr.parentElement; body.nextElementSibling.hidden = false; body.remove(); };
-    tr.addEventListener('click', open);
-    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    tr.addEventListener('click', () => openFold(tr));
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFold(tr); } });
   });
 }
+function openFold(tr) { const body = tr.parentElement; body.nextElementSibling.hidden = false; body.remove(); }
 
 // ---------------------------------------------------------------- playground
 function draftKey(id) { return 'dl-draft:' + id; }
@@ -236,7 +545,7 @@ function draftKey(id) { return 'dl-draft:' + id; }
 function ensureEditor() {
   if (S.editor) return;
   S.editor = CodeMirror.fromTextArea($('#pg-editor'), {
-    mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, lineWrapping: false,
+    mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, lineWrapping: !!S.prefs.diffWrap,
     extraKeys: {
       Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    '),
       'Shift-Tab': cm => cm.indentSelection('subtract'),
@@ -280,6 +589,7 @@ function setPgMode(mode) {
   if (mode === 'diff') renderDiff($('#pg-diff'), S.byId[S.lessonId].code, S.editor.getValue(), 'changes', null);
   else S.editor.refresh();
   updatePgStats();
+  syncPrefControls();
 }
 
 function updatePgStats() {
@@ -387,11 +697,13 @@ function ensureWorker() {
   return S.worker;
 }
 
+// what tells runs apart comes first: the changed knobs, then where the code came from
 function runLabel() {
   const l = S.byId[S.lessonId];
   const ov = overrides();
   const knobs = Object.entries(ov).map(([k, v]) => `${k}=${typeof v === 'number' ? fmt(v, { type: Number.isInteger(v) ? 'int' : 'float' }) : v}`).join(', ');
-  return `${S.view === 'playground' ? 'playground ' : ''}${lessonNum(l)} ${l.title}${knobs ? ' · ' + knobs : ''}`;
+  const source = `${S.view === 'playground' ? 'playground ' : ''}${lessonNum(l)} ${l.title}`;
+  return { knobs, source, text: knobs ? `${knobs} · ${source}` : source };
 }
 
 function toggleRun() {
@@ -404,7 +716,8 @@ function toggleRun() {
   if (S.runs.length >= MAX_RUNS) S.runs.splice(S.runs.findIndex(r => r !== S.running), 1);
   const used = new Set(S.runs.map(r => r.slot));
   let slot = 1; while (used.has(slot)) slot++;
-  const run = { id: S.nextRunId++, slot, label: runLabel(), lessonId: l.id, points: {}, total: 0, visible: true, status: 'running', t0: performance.now() };
+  const { text: label, knobs, source } = runLabel();
+  const run = { id: S.nextRunId++, slot, label, knobs, source, lessonId: l.id, points: {}, total: 0, visible: true, status: 'running', t0: performance.now() };
   S.runs.push(run);
   S.running = run;
   consoleClear();
@@ -562,19 +875,27 @@ function drawChart() {
   if (sel.innerHTML !== optsHtml) sel.innerHTML = optsHtml;
   const hasData = S.runs.some(r => r.points[S.metric]?.length);
   $('#chart-empty').hidden = hasData;
+  $('#zoom-hint').hidden = !!S.zoom || !hasData;
 
   const text2 = cssVar('--text-3'), grid = cssVar('--grid'), surface = cssVar('--surface');
   const datasets = [];
-  for (const r of S.runs) {
+  // a hovered run (from the runs list) is drawn on top at full strength; the others fade back.
+  // Chart.js paints dataset 0 last, so the hovered run goes first.
+  const hot = S.runs.some(r => r.id === S.hoverRun && r.visible) ? S.hoverRun : null;
+  const ordered = hot ? [...S.runs].sort((a, b) => (b.id === hot) - (a.id === hot)) : S.runs;
+  for (const r of ordered) {
     const pts = r.points[S.metric];
     if (!r.visible || !pts || !pts.length) continue;
-    const color = cssVar(`--series-${r.slot}`);
+    const base = cssVar(`--series-${r.slot}`);
+    const faded = hot && r.id !== hot;
+    const color = faded ? withAlpha(base, 0.18) : base;
+    const width = hot === r.id ? 3 : 2;
     const raw = thin(pts);
     if (S.smooth > 0 && pts.length > 5) {
-      datasets.push({ label: r.label + ' (raw)', data: raw.map(([x, y]) => ({ x, y })), borderColor: withAlpha(color, 0.22), borderWidth: 1, pointRadius: 0, raw: true });
-      datasets.push({ label: r.label, data: thin(smoothed(pts, S.smooth)).map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: surface, pointHoverBorderWidth: 2, pointHoverBackgroundColor: color });
+      datasets.push({ label: r.label + ' (raw)', runId: r.id, data: raw.map(([x, y]) => ({ x, y })), borderColor: withAlpha(base, faded ? 0.06 : 0.22), borderWidth: 1, pointRadius: 0, raw: true });
+      datasets.push({ label: r.label, runId: r.id, data: thin(smoothed(pts, S.smooth)).map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: surface, pointHoverBorderWidth: 2, pointHoverBackgroundColor: base });
     } else {
-      datasets.push({ label: r.label, data: raw.map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: 2, pointRadius: pts.length < 40 ? 2 : 0, pointHoverRadius: 4, pointHoverBackgroundColor: color, pointBackgroundColor: color });
+      datasets.push({ label: r.label, runId: r.id, data: raw.map(([x, y]) => ({ x, y })), borderColor: color, borderWidth: width, pointRadius: pts.length < 40 ? 2 : 0, pointHoverRadius: 4, pointHoverBackgroundColor: base, pointBackgroundColor: color });
     }
   }
   const yType = S.logY ? 'logarithmic' : 'linear';
@@ -585,10 +906,21 @@ function drawChart() {
       options: {
         animation: false, parsing: false, normalized: true, maintainAspectRatio: false,
         interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        // pointing at a curve marks its row in the runs list
+        onHover: (evt, els) => {
+          let best = null, dist = Infinity;
+          for (const el of els) {
+            if (chart.data.datasets[el.datasetIndex].raw) continue;
+            const d = Math.abs(el.element.y - evt.y);
+            if (d < dist) { dist = d; best = chart.data.datasets[el.datasetIndex].runId; }
+          }
+          markRunRow(best);
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
             filter: item => !item.dataset.raw,
+            itemSort: (a, b) => a.parsed.y - b.parsed.y, // lowest (usually best) first
             callbacks: {
               title: items => items.length ? `step ${items[0].parsed.x}` : '',
               label: item => ` ${item.dataset.label}: ${fmtY(item.parsed.y)}`,
@@ -607,10 +939,122 @@ function drawChart() {
     Object.assign(chart.options.scales.x.ticks, { color: text2 }); chart.options.scales.x.grid.color = grid;
     chart.options.scales.x.title.color = text2;
     Object.assign(chart.options.scales.y.ticks, { color: text2 }); chart.options.scales.y.grid.color = grid;
-    chart.update('none');
   }
+  fitZoom(datasets);
+  chart.update('none');
   if (S.showTable) renderTable();
   updateRunFinals();
+}
+
+// ---------------------------------------------------------------- chart zoom
+// Drag across the chart to zoom into a range of steps; shift-drag pans, ctrl/cmd + wheel zooms,
+// double-click resets. The y-axis refits to what is visible, which is the point: late in training
+// the curves differ by a few hundredths and are flat lines at full scale.
+function setZoom(range) {
+  S.zoom = range;
+  $('#zoom-reset').hidden = !range;
+  $('#zoom-hint').hidden = !!range;
+  drawChart();
+}
+
+function dataExtent() {
+  let lo = Infinity, hi = -Infinity;
+  for (const r of S.runs) {
+    const pts = r.visible && r.points[S.metric];
+    if (pts && pts.length) { lo = Math.min(lo, pts[0][0]); hi = Math.max(hi, pts[pts.length - 1][0]); }
+  }
+  return lo < hi ? { min: lo, max: hi } : null;
+}
+
+// clamp a step range to the data and keep it at least a couple of steps wide; null = everything
+function clampRange(min, max) {
+  const ext = dataExtent();
+  if (!ext) return null;
+  const width = Math.max(2, Math.round(max - min)); // steps are whole numbers
+  if (width >= ext.max - ext.min) return null;
+  min = Math.round(Math.max(ext.min, Math.min(min, ext.max - width)));
+  return { min, max: min + width };
+}
+
+function fitZoom(datasets) {
+  const x = chart.options.scales.x, y = chart.options.scales.y;
+  if (!S.zoom) { delete x.min; delete x.max; delete y.min; delete y.max; return; }
+  x.min = S.zoom.min; x.max = S.zoom.max;
+  let lo = Infinity, hi = -Infinity;
+  for (const d of datasets) {
+    if (d.raw) continue; // fit the curves, not the noise around them
+    for (const p of d.data) if (p.x >= S.zoom.min && p.x <= S.zoom.max && isFinite(p.y)) { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); }
+  }
+  if (lo === Infinity) { delete y.min; delete y.max; return; }
+  if (S.logY) { lo = Math.max(lo, 1e-12); y.min = lo / 1.08; y.max = hi * 1.08; return; }
+  // round out to a tick step so the axis reads 2.5 … 3.4, not 2.492 … 3.329
+  const span = (hi - lo) || Math.abs(hi) * 0.1 || 1;
+  const mag = 10 ** Math.floor(Math.log10(span / 5));
+  const step = [1, 2, 5, 10].map(m => m * mag).find(s => span / s <= 6);
+  y.min = Math.floor(lo / step) * step; y.max = Math.ceil(hi / step) * step;
+  if (y.min === lo) y.min -= step;
+  if (y.max === hi) y.max += step;
+}
+
+function bindChartZoom() {
+  const canvas = $('#chart'), sel = $('#zoom-sel');
+  let drag = null, frame = null;
+  const inArea = (e) => { const a = chart && chart.chartArea; return a && e.offsetX >= a.left && e.offsetX <= a.right && e.offsetY >= a.top && e.offsetY <= a.bottom; };
+  const clampX = (px) => Math.max(chart.chartArea.left, Math.min(chart.chartArea.right, px));
+
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !inArea(e) || !dataExtent()) return;
+    canvas.setPointerCapture(e.pointerId);
+    const pan = e.shiftKey && S.zoom;
+    drag = { x0: e.offsetX, pan, start: S.zoom && { ...S.zoom }, x: e.offsetX };
+    canvas.style.cursor = pan ? 'grabbing' : 'col-resize';
+    chart.options.plugins.tooltip.enabled = false; // it would cover the selection
+    chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+    chart.update('none');
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return;
+    drag.x = clampX(e.offsetX);
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      if (!drag) return;
+      const a = chart.chartArea;
+      if (drag.pan) {
+        const perStep = a.width / (drag.start.max - drag.start.min);
+        const shift = (drag.x0 - drag.x) / perStep;
+        const r = clampRange(drag.start.min + shift, drag.start.max + shift);
+        if (r) { S.zoom = r; drawChart(); }
+      } else {
+        const l = Math.min(drag.x0, drag.x), w = Math.abs(drag.x - drag.x0);
+        Object.assign(sel.style, { left: canvas.offsetLeft + l + 'px', width: w + 'px', top: canvas.offsetTop + a.top + 'px', height: a.height + 'px' });
+        sel.hidden = w < 3;
+      }
+    });
+  });
+  const end = () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    sel.hidden = true;
+    canvas.style.cursor = '';
+    chart.options.plugins.tooltip.enabled = true;
+    if (d.pan || Math.abs(d.x - d.x0) < 6) { chart.update('none'); return; }
+    const sx = chart.scales.x;
+    const a = sx.getValueForPixel(Math.min(d.x0, d.x)), b = sx.getValueForPixel(Math.max(d.x0, d.x));
+    setZoom(clampRange(a, b));
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  canvas.addEventListener('dblclick', () => { if (S.zoom) setZoom(null); });
+  canvas.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey) || !inArea(e)) return;
+    const ext = dataExtent();
+    if (!ext) return;
+    e.preventDefault();
+    const cur = S.zoom || ext, at = chart.scales.x.getValueForPixel(e.offsetX);
+    const f = e.deltaY > 0 ? 1.25 : 0.8;
+    setZoom(clampRange(at - (at - cur.min) * f, at + (cur.max - at) * f));
+  }, { passive: false });
 }
 function fmtY(v) { const a = Math.abs(v); return a !== 0 && (a < 1e-3 || a >= 1e5) ? v.toExponential(1) : String(+v.toPrecision(4)); }
 
@@ -621,11 +1065,20 @@ function finalValue(r) {
   return sm[sm.length - 1][1];
 }
 
+function setHoverRun(id) {
+  if (S.hoverRun === id) return;
+  S.hoverRun = id;
+  drawChart();
+}
+function markRunRow(id) {
+  document.querySelectorAll('#runs li').forEach(li => li.classList.toggle('hot', +li.dataset.run === id));
+}
+
 function renderRuns() {
   $('#runs').innerHTML = S.runs.map(r => `
     <li class="${r.visible ? '' : 'hidden-run'}" data-run="${r.id}">
       <span class="swatch" style="background:var(--series-${r.slot})"></span>
-      <span class="label" title="${esc(r.label)} (click to show/hide)">${esc(r.label)}</span>
+      <button class="label" title="${esc(r.label)} (click to show/hide)" aria-pressed="${r.visible}">${r.knobs ? `<b>${esc(r.knobs)}</b> · ` : ''}${esc(r.source)}</button>
       <span class="final" data-final="${r.id}"></span>
       <span class="st">${r.status === 'running' ? '…' : r.status === 'error' ? '⚠' : r.status === 'stopped' ? '■' : ''}</span>
       <button class="x" data-del="${r.id}" aria-label="remove run">×</button>
@@ -664,19 +1117,50 @@ function toggleTheme() {
   drawChart();
 }
 
+// value from a [data-pref] control, typed like the default (numbers stay numbers)
+function prefValue(key, raw) {
+  if (typeof raw === 'boolean') return raw;
+  const def = DEFAULT_PREFS[key];
+  return (typeof def === 'number' || def === null) && raw !== '' && isFinite(raw) ? Number(raw) : raw;
+}
+
+function bindPrefControls() {
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-pref]');
+    if (b) setPref(b.dataset.pref, prefValue(b.dataset.pref, b.dataset.value));
+  });
+  document.addEventListener('input', e => {
+    const el = e.target.closest('input[type=range][data-pref]');
+    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.value));
+  });
+  document.addEventListener('change', e => {
+    const el = e.target.closest('input[data-pref], select[data-pref]');
+    if (el) setPref(el.dataset.pref, prefValue(el.dataset.pref, el.type === 'checkbox' ? el.checked !== ('invert' in el.dataset) : el.value));
+  });
+}
+
 function bindUi() {
+  bindPrefControls();
+  bindDisplayPanel();
+  bindResizers();
+  bindHeightResizers();
+  document.querySelectorAll('[data-collapse]').forEach(b => b.addEventListener('click', () => setPref(b.dataset.collapse, !S.prefs[b.dataset.collapse])));
+  $('#chart-expand').addEventListener('click', () => setChartExpanded(!$('#chart-card').classList.contains('expanded')));
+  document.addEventListener('pointerdown', e => {
+    if ($('#chart-card').classList.contains('expanded') && !e.target.closest('#chart-card')) setChartExpanded(false);
+  });
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
-  $('#nav-toggle').addEventListener('click', () => {
-    const open = document.body.classList.toggle('nav-open');
-    $('#nav-toggle').setAttribute('aria-expanded', String(open));
-  });
+  $('#nav-toggle').addEventListener('click', toggleNav);
+  $('#lab-toggle').addEventListener('click', toggleLab);
+  matchMedia('(max-width: 760px)').addEventListener('change', () => { document.body.classList.remove('nav-open'); syncPaneToggles(); });
 
   $('#compare-select').addEventListener('change', e => { S.compare = e.target.value; renderLessonDiff(); });
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
     S.diffMode = b.dataset.mode;
     document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
     renderLessonDiff();
+    syncPrefControls();
   }));
   $('#copy-code').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(S.byId[S.lessonId].code); $('#copy-code').textContent = 'Copied'; }
@@ -686,6 +1170,8 @@ function bindUi() {
   $('#download-code').addEventListener('click', () => download(`${S.lessonId}.py`, S.byId[S.lessonId].code));
   $('#open-playground').addEventListener('click', () => { location.hash = '#/playground/' + S.lessonId; });
 
+  document.querySelectorAll('[data-expand]').forEach(b => b.addEventListener('click', () =>
+    document.getElementById(b.dataset.expand).querySelectorAll('tr.fold').forEach(openFold)));
   $('#pg-base').addEventListener('change', e => { location.hash = '#/playground/' + e.target.value; });
   $('#pg-reset').addEventListener('click', () => {
     if (!confirm('Discard your edits and restore the lesson code?')) return;
@@ -709,11 +1195,26 @@ function bindUi() {
   });
   $('#run-btn').addEventListener('click', toggleRun);
   document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.target.closest('.CodeMirror')) { e.preventDefault(); toggleRun(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey || $('#shortcuts').open) return;
+    if (e.key === 'Escape') {
+      if ($('#chart-card').classList.contains('expanded')) setChartExpanded(false);
+      else if (!$('#display-panel').hidden) setDisplayPanel(false);
+      else if (S.prefs.focus && !isTyping(e)) setPref('focus', false);
+      return;
+    }
+    if (isTyping(e)) return;
+    const shortcut = {
+      '[': toggleNav, ']': toggleLab, '\\': toggleFocus, '?': showShortcuts,
+      j: () => goLesson(1), k: () => goLesson(-1),
+    }[e.key];
+    if (shortcut) { e.preventDefault(); shortcut(); }
   });
 
-  $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; drawChart(); });
-  $('#smooth').addEventListener('input', e => { S.smooth = +e.target.value; store.set('dl-smooth', S.smooth); drawChart(); });
+  $('#metric-select').addEventListener('change', e => { S.metric = e.target.value; setZoom(null); });
+  bindChartZoom();
+  $('#zoom-reset').addEventListener('click', () => setZoom(null));
+  $('#smooth').addEventListener('input', e => { S.smooth = +e.target.value; setPref('smooth', S.smooth); drawChart(); });
   $('#logy').addEventListener('change', e => { S.logY = e.target.checked; drawChart(); });
   $('#table-toggle').addEventListener('click', () => {
     S.showTable = !S.showTable;
@@ -721,7 +1222,7 @@ function bindUi() {
     $('#run-table').hidden = !S.showTable;
     drawChart();
   });
-  $('#clear-runs').addEventListener('click', () => { S.runs = S.runs.filter(r => r === S.running); renderRuns(); drawChart(); });
+  $('#clear-runs').addEventListener('click', () => { S.runs = S.runs.filter(r => r === S.running); renderRuns(); setZoom(null); });
   $('#runs').addEventListener('click', e => {
     const del = e.target.closest('[data-del]');
     if (del) {
@@ -732,13 +1233,21 @@ function bindUi() {
       return;
     }
     const li = e.target.closest('[data-run]');
-    if (li && e.target.classList.contains('label')) {
+    if (li && e.target.closest('.label')) {
       const r = S.runs.find(x => x.id === +li.dataset.run);
       r.visible = !r.visible;
       renderRuns(); drawChart();
     }
   });
   $('#clear-console').addEventListener('click', consoleClear);
+  // hovering or focusing a run isolates its curve
+  const runs = $('#runs');
+  const runAt = (e) => { const li = e.target.closest('[data-run]'); return li ? +li.dataset.run : null; };
+  runs.addEventListener('pointerover', e => setHoverRun(runAt(e)));
+  runs.addEventListener('pointerleave', () => setHoverRun(null));
+  runs.addEventListener('focusin', e => setHoverRun(runAt(e)));
+  runs.addEventListener('focusout', e => { if (!runs.contains(e.relatedTarget)) setHoverRun(null); });
+  $('#chart').addEventListener('pointerleave', () => markRunRow(null));
 }
 
 boot();

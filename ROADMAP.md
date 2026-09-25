@@ -40,6 +40,6 @@ Lessons we want next. Each is a small branch off an existing lesson; see [CONTRI
 
 ## Site
 - [ ] Share a playground snippet via URL
-- [ ] Side-by-side diff mode
+- [x] Side-by-side diff mode (with word-level highlights)
 - [ ] Quizzes / "predict the curve before you run" prompts
 - [ ] Pyodide interrupt support (needs cross-origin isolation)

@@ -12,13 +12,23 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
   <link rel="stylesheet" href="styles.css">
   <script>
-    // apply the saved theme before first paint
-    try { const t = localStorage.getItem('dl-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    // apply the saved theme and pane layout before first paint (app.js applies the rest)
+    try {
+      const root = document.documentElement;
+      const t = localStorage.getItem('dl-theme'); if (t) root.dataset.theme = t;
+      const p = JSON.parse(localStorage.getItem('dl-prefs')) || {};
+      root.classList.toggle('nav-hidden', !!p.navHidden);
+      root.classList.toggle('lab-hidden', !!p.labHidden);
+      root.classList.toggle('focus', !!p.focus);
+      for (const k of ['knobs', 'chart', 'console']) root.classList.toggle(k + '-collapsed', !!p[k + 'Collapsed']);
+      if (p.navW) root.style.setProperty('--nav-w', p.navW + 'px');
+      if (p.labW) root.style.setProperty('--lab-w', p.labW + 'px');
+    } catch (e) {}
   </script>
 </head>
 <body>
   <header class="topbar">
-    <button class="icon-btn nav-toggle" id="nav-toggle" aria-label="Toggle lesson list" aria-expanded="false">
+    <button class="icon-btn nav-toggle" id="nav-toggle" aria-label="Lesson list" aria-controls="nav" aria-expanded="false">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
     <a class="brand" href="#/">
@@ -30,6 +40,65 @@
       <a class="tab" id="tab-lesson" role="tab" href="#">Lesson</a>
       <a class="tab" id="tab-playground" role="tab" href="#">Playground</a>
     </nav>
+    <button class="icon-btn" id="lab-toggle" aria-label="Lab" aria-controls="lab" aria-expanded="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14.5 4v16" stroke="currentColor" stroke-width="1.8"/><path d="M14.5 4h4a2.5 2.5 0 0 1 2.5 2.5v11a2.5 2.5 0 0 1-2.5 2.5h-4z" fill="currentColor" opacity=".35"/></svg>
+    </button>
+    <div class="popover-anchor">
+      <button class="icon-btn" id="display-btn" aria-label="Display settings" title="Display settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="display-panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="popover" id="display-panel" role="dialog" aria-label="Display settings" hidden>
+        <section>
+          <h3>Layout</h3>
+          <div class="presets" role="group" aria-label="Layout presets">
+            <button class="preset" data-preset="read" title="Lesson list and the lesson, no lab"><svg viewBox="0 0 30 20" width="30" height="20" aria-hidden="true"><rect x=".5" y=".5" width="29" height="19" rx="3" fill="none" stroke="currentColor"/><rect x="3" y="3" width="6" height="14" rx="1" fill="currentColor" opacity=".35"/><rect x="11" y="3" width="16" height="14" rx="1" fill="currentColor" opacity=".7"/></svg><span>Read</span></button>
+            <button class="preset" data-preset="balanced" title="Everything at default widths"><svg viewBox="0 0 30 20" width="30" height="20" aria-hidden="true"><rect x=".5" y=".5" width="29" height="19" rx="3" fill="none" stroke="currentColor"/><rect x="3" y="3" width="5" height="14" rx="1" fill="currentColor" opacity=".35"/><rect x="10" y="3" width="9" height="14" rx="1" fill="currentColor" opacity=".7"/><rect x="21" y="3" width="6" height="14" rx="1" fill="currentColor" opacity=".35"/></svg><span>Balanced</span></button>
+            <button class="preset" data-preset="experiment" title="Lesson and a wide lab, no lesson list"><svg viewBox="0 0 30 20" width="30" height="20" aria-hidden="true"><rect x=".5" y=".5" width="29" height="19" rx="3" fill="none" stroke="currentColor"/><rect x="3" y="3" width="10" height="14" rx="1" fill="currentColor" opacity=".7"/><rect x="15" y="3" width="12" height="14" rx="1" fill="currentColor" opacity=".35"/></svg><span>Experiment</span></button>
+          </div>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="navHidden" data-invert> Lesson list</span><kbd>[</kbd></label>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="labHidden" data-invert> Lab</span><kbd>]</kbd></label>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="focus"> Focus mode (just the lesson)</span><kbd>\</kbd></label>
+        </section>
+        <section>
+          <h3>Reading</h3>
+          <div class="pref-row"><span>Text size</span>
+            <span class="seg" role="group" aria-label="Lesson text size">
+              <button class="seg-btn" data-pref="proseSize" data-value="s">S</button>
+              <button class="seg-btn" data-pref="proseSize" data-value="m">M</button>
+              <button class="seg-btn" data-pref="proseSize" data-value="l">L</button>
+            </span>
+          </div>
+          <div class="pref-row"><span>Page width</span>
+            <span class="seg" role="group" aria-label="Page width">
+              <button class="seg-btn" data-pref="contentWidth" data-value="narrow">narrow</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="normal">normal</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="wide">wide</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="full">full</button>
+            </span>
+          </div>
+        </section>
+        <section>
+          <h3>Code</h3>
+          <div class="pref-row"><span>Code size</span><input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></div>
+          <div class="pref-row"><span>Context lines</span>
+            <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+              <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+            </span>
+          </div>
+          <div class="pref-row"><span>Diff layout</span>
+            <span class="seg" role="group" aria-label="Diff layout">
+              <button class="seg-btn" data-pref="diffLayout" data-value="unified">unified</button>
+              <button class="seg-btn" data-pref="diffLayout" data-value="split">split</button>
+            </span>
+          </div>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="wordDiff"> Highlight changed words</span></label>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="diffWrap"> Wrap long lines</span></label>
+        </section>
+        <div class="popover-foot"><button class="btn ghost small" id="show-shortcuts">Keyboard shortcuts <kbd>?</kbd></button><span class="spacer"></span><button class="btn ghost small" id="reset-display">Reset to defaults</button></div>
+      </div>
+    </div>
     <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
     </button>
@@ -37,6 +106,8 @@
 
   <div class="layout">
     <aside class="nav" id="nav" aria-label="Lessons"></aside>
+    <div class="resizer" data-resize="nav" role="separator" aria-orientation="vertical" aria-controls="nav" aria-label="Resize lesson list (double-click to reset)" tabindex="0"></div>
+    <div class="resizer" data-resize="lab" role="separator" aria-orientation="vertical" aria-controls="lab" aria-label="Resize lab (double-click to reset)" tabindex="0"></div>
 
     <main class="main" id="main">
       <section id="lesson-view" class="view">
@@ -50,6 +121,7 @@
         <div class="refs" id="lesson-refs"></div>
 
         <section class="card diff-card" aria-label="Code diff">
+          <div class="diff-sticky">
           <div class="card-head">
             <h2>The diff</h2>
             <label class="inline-field">compare with
@@ -64,6 +136,24 @@
             <button class="btn ghost small" id="copy-code" title="Copy this lesson's code">Copy</button>
             <button class="btn ghost small" id="download-code" title="Download as code.py">Download</button>
             <button class="btn small" id="open-playground">Edit in Playground →</button>
+          </div>
+          <div class="diff-tools" role="group" aria-label="Diff display">
+          <span class="seg diff-only" role="group" aria-label="Diff layout">
+            <button class="seg-btn" data-pref="diffLayout" data-value="unified" title="One column: removed lines above added ones">unified</button>
+            <button class="seg-btn" data-pref="diffLayout" data-value="split" title="Two columns: before on the left, after on the right">split</button>
+          </span>
+          <span class="inline-field ctx-field">context
+            <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+              <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+            </span>
+          </span>
+          <button class="btn ghost small" data-expand="diff">expand all</button>
+          <label class="check diff-only" title="Highlight the exact words that changed inside a line"><input type="checkbox" data-pref="wordDiff"> words</label>
+          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap</label>
+          <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
+          </div>
           </div>
           <div class="diff" id="diff"></div>
         </section>
@@ -85,6 +175,23 @@
           <span class="diff-stats" id="pg-stats"></span>
         </div>
         <p class="hint">Your edits are saved in this browser. Add <code># @param {"min": 0, "max": 1}</code> to any assignment to get a knob in the lab. Print lines like <code>step 3 | loss 2.1</code> to chart them.</p>
+        <div class="diff-tools pg-tools" role="group" aria-label="Diff display">
+        <span class="seg diff-only" role="group" aria-label="Diff layout">
+            <button class="seg-btn" data-pref="diffLayout" data-value="unified" title="One column: removed lines above added ones">unified</button>
+            <button class="seg-btn" data-pref="diffLayout" data-value="split" title="Two columns: before on the left, after on the right">split</button>
+          </span>
+          <span class="inline-field ctx-field">context
+          <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+            <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+            <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+            <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+          </span>
+        </span>
+        <button class="btn ghost small" data-expand="pg-diff">expand all</button>
+        <label class="check diff-only" title="Highlight the exact words that changed inside a line"><input type="checkbox" data-pref="wordDiff"> words</label>
+          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap</label>
+        <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
+        </div>
         <div class="editor-wrap" id="pg-editor-wrap"><textarea id="pg-editor"></textarea></div>
         <div class="diff" id="pg-diff" hidden></div>
       </section>
@@ -96,8 +203,13 @@
         <span class="lab-source" id="lab-source"></span>
       </div>
 
-      <div class="knobs" id="knobs"></div>
-      <div class="experiments" id="experiments"></div>
+      <section class="knobs-card" aria-label="Knobs">
+        <button class="collapse-btn" data-collapse="knobsCollapsed" aria-controls="knobs-body"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Knobs</button>
+        <div class="knobs-body" id="knobs-body">
+          <div class="knobs" id="knobs"></div>
+          <div class="experiments" id="experiments"></div>
+        </div>
+      </section>
 
       <div class="run-row">
         <button class="btn primary" id="run-btn">
@@ -109,28 +221,57 @@
       </div>
       <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
 
-      <section class="chart-card" aria-label="Training metrics">
-        <div class="chart-controls">
-          <label class="inline-field">metric <select id="metric-select"></select></label>
-          <label class="inline-field">smooth <input type="range" id="smooth" min="0" max="0.99" step="0.01" value="0.9"></label>
-          <label class="check"><input type="checkbox" id="logy"> log y</label>
+      <section class="chart-card" id="chart-card" aria-label="Training metrics">
+        <div class="chart-head">
+          <button class="collapse-btn" data-collapse="chartCollapsed" aria-controls="chart-body"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Chart</button>
           <span class="spacer"></span>
+          <span class="zoom-hint" id="zoom-hint" title="Shift-drag pans, Ctrl/Cmd + wheel zooms, double-click resets" hidden>drag to zoom</span>
+          <button class="btn ghost small" id="zoom-reset" hidden>reset zoom</button>
           <button class="btn ghost small" id="table-toggle" aria-pressed="false">table</button>
           <button class="btn ghost small" id="clear-runs">clear</button>
+          <button class="icon-btn small" id="chart-expand" aria-pressed="false" aria-label="Enlarge chart" title="Enlarge chart (Esc to close)">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-        <div class="chart-box"><canvas id="chart" aria-label="Loss curves of your runs" role="img"></canvas>
-          <div class="chart-empty" id="chart-empty">Run the code to see its training curve. Runs stay on the chart so you can compare them.</div>
+        <div class="chart-body" id="chart-body">
+          <div class="chart-controls">
+            <label class="inline-field">metric <select id="metric-select"></select></label>
+            <label class="inline-field">smooth <input type="range" id="smooth" min="0" max="0.99" step="0.01" value="0.9"></label>
+            <label class="check"><input type="checkbox" id="logy"> log y</label>
+          </div>
+          <div class="chart-box"><canvas id="chart" aria-label="Loss curves of your runs. Drag across to zoom into a range of steps; double-click to reset." role="img"></canvas>
+            <div class="zoom-sel" id="zoom-sel" hidden></div>
+            <div class="chart-empty" id="chart-empty">Run the code to see its training curve. Runs stay on the chart so you can compare them.</div>
+          </div>
+          <div class="resizer-h" data-resize-h="chart" role="separator" aria-orientation="horizontal" aria-label="Resize chart (double-click to reset)" tabindex="0"></div>
+          <div class="chart-side">
+            <div class="run-table" id="run-table" hidden></div>
+            <ul class="runs" id="runs"></ul>
+          </div>
         </div>
-        <div class="run-table" id="run-table" hidden></div>
-        <ul class="runs" id="runs"></ul>
       </section>
 
       <section class="console-card" aria-label="Output">
-        <div class="console-head"><span>Output</span><span class="spacer"></span><button class="btn ghost small" id="clear-console">clear</button></div>
+        <div class="console-head"><button class="collapse-btn" data-collapse="consoleCollapsed" aria-controls="console"><svg class="chev" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Output</button><span class="spacer"></span><button class="btn ghost small" id="clear-console">clear</button></div>
         <pre class="console" id="console"></pre>
+        <div class="resizer-h" data-resize-h="console" role="separator" aria-orientation="horizontal" aria-label="Resize output (double-click to reset)" tabindex="0"></div>
       </section>
     </aside>
   </div>
+
+  <dialog class="shortcuts" id="shortcuts" aria-labelledby="shortcuts-title">
+    <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+    <dl>
+      <dt><kbd>[</kbd></dt><dd>show / hide the lesson list</dd>
+      <dt><kbd>]</kbd></dt><dd>show / hide the lab</dd>
+      <dt><kbd>\</kbd></dt><dd>focus mode: just the lesson</dd>
+      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>next / previous lesson</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd>run / stop (also in the editor)</dd>
+      <dt><kbd>Esc</kbd></dt><dd>leave focus mode, close panels</dd>
+      <dt><kbd>?</kbd></dt><dd>this list</dd>
+    </dl>
+    <form method="dialog"><button class="btn small">Close</button></form>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
@@ -139,6 +280,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/python/python.min.js"></script>
   <script src="params.js"></script>
+  <script src="diff.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
