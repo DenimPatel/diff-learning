@@ -101,6 +101,21 @@ button, select, input { font: inherit; color: inherit; }
 .icon-btn:hover { background: var(--surface-2); }
 .icon-btn[aria-expanded="true"] { color: var(--text); }
 
+/* ---------- display popover ---------- */
+.popover-anchor { position: relative; }
+.popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 320px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .16); padding: 6px 14px 10px; font-size: 13px;
+}
+.popover section { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.popover section:empty { display: none; }
+.popover h3 { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.pref-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; color: var(--text-2); }
+.pref-row input[type=range] { width: 130px; accent-color: var(--accent); }
+.popover .seg-btn { padding: 1px 8px; font-size: 12.5px; }
+.popover-foot { padding-top: 8px; text-align: right; }
+
 /* ---------- layout ---------- */
 /* pane widths are variables so the user can resize them; hidden panes collapse their column */
 :root { --nav-w: 272px; --lab-w: 420px; }
@@ -119,7 +134,7 @@ button, select, input { font: inherit; color: inherit; }
 .nav-hidden.lab-hidden .layout, .focus .layout { grid-template-columns: 0 minmax(0, 1fr) 0; }
 .nav, .main, .lab { overflow-y: auto; min-width: 0; }
 .nav { border-right: 1px solid var(--border); background: var(--surface); padding: 12px 10px 40px; }
-.main { padding: 28px 36px 60px; }
+.main { --main-pt: 28px; padding: var(--main-pt) 36px 60px; }
 .lab { border-left: 1px solid var(--border); background: var(--surface); padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------- nav ---------- */
@@ -138,13 +153,13 @@ button, select, input { font: inherit; color: inherit; }
 .nav-item .done { margin-left: auto; color: var(--good); font-size: 12px; }
 
 /* ---------- lesson ---------- */
-.view { max-width: 920px; margin: 0 auto; }
+.view { max-width: var(--content-width, 920px); margin: 0 auto; }
 .crumb { font-size: 13px; color: var(--text-3); }
 h1 { font-size: 30px; line-height: 1.2; margin: 4px 0 8px; letter-spacing: -.01em; }
 .summary { font-size: 17px; color: var(--text-2); margin: 0 0 10px; }
 .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; color: var(--text-3); }
 .chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 99px; padding: 1px 9px; font-size: 12px; color: var(--text-2); }
-.prose { margin-top: 18px; }
+.prose { margin-top: 18px; font-size: var(--prose-size, 15px); }
 .prose h3 { font-size: 17px; margin: 22px 0 6px; }
 .prose p, .prose li { color: var(--text); }
 .prose code { background: var(--surface-2); border: 1px solid var(--border); padding: 0 4px; border-radius: 5px; font-size: .88em; }
@@ -158,7 +173,9 @@ h1 { font-size: 30px; line-height: 1.2; margin: 4px 0 8px; letter-spacing: -.01e
 .refs h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); margin: 0 0 4px; }
 .refs ul { margin: 0; padding-left: 18px; }
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); margin-top: 26px; overflow: hidden; }
+/* overflow: clip (not hidden) keeps the rounded corners without breaking the sticky diff header */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); margin-top: 26px; overflow: hidden; overflow: clip; }
+.diff-sticky { position: sticky; top: calc(-1 * var(--main-pt)); z-index: 5; background: var(--surface); }
 .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .card-head h2, .lab-head h2 { font-size: 15px; margin: 0; }
 .inline-field { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); }
@@ -278,7 +295,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 /* ---------- responsive ---------- */
 @media (max-width: 1280px) {
   :root { --nav-w: 240px; --lab-w: 380px; }
-  .main { padding: 24px 24px 60px; }
+  .main { --main-pt: 24px; padding: var(--main-pt) 24px 60px; }
 }
 /* below 1060px the Lab stacks under the lesson; custom widths don't apply */
 @media (max-width: 1060px) {
@@ -288,6 +305,7 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
   .main, .lab { overflow: visible; }
   .lab { border-left: 0; border-top: 1px solid var(--border); }
   .tagline { display: none; }
+  .diff-sticky { top: 52px; } /* the page scrolls here, under the sticky top bar */
 }
 /* phones: the lesson list is a drawer opened by the menu button, whatever the saved setting */
 @media (max-width: 760px) {
@@ -295,15 +313,19 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
     grid-template-areas: "main" "lab"; grid-template-columns: minmax(0, 1fr);
   }
   .nav-hidden .nav, .focus .nav { display: block; }
+  .popover { position: fixed; top: 60px; left: 16px; right: 16px; width: auto; max-width: none; }
   .nav {
     position: fixed; top: 52px; left: 0; bottom: 0; width: min(300px, 85vw); height: auto; z-index: 25;
     transform: translateX(-102%); transition: transform .2s; box-shadow: var(--shadow);
   }
   body.nav-open .nav { transform: none; }
   .lab { grid-column: 1; padding: 16px; }
-  .main { padding: 18px 16px 40px; }
+  .main { --main-pt: 18px; padding: var(--main-pt) 16px 40px; }
   h1 { font-size: 24px; }
   .knob { grid-template-columns: 100px 1fr 60px; }
   .brand-name { display: none; }
+  .topbar { gap: 4px; }
+  .tabs { margin-right: 4px; }
+  .tab { padding: 4px 10px; }
   .CodeMirror { height: 60vh; }
 }

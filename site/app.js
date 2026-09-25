@@ -104,6 +104,23 @@ function syncPaneToggles() {
   lab.title = `${labOpen ? 'Hide' : 'Show'} the lab  ]`;
 }
 
+// ---- display panel (a popover under the top-bar button)
+function setDisplayPanel(open) {
+  $('#display-panel').hidden = !open;
+  $('#display-btn').setAttribute('aria-expanded', String(open));
+  if (open) $('#display-panel').querySelector('button, input')?.focus();
+}
+function bindDisplayPanel() {
+  $('#display-btn').addEventListener('click', () => setDisplayPanel($('#display-panel').hidden));
+  document.addEventListener('pointerdown', e => {
+    if (!$('#display-panel').hidden && !e.target.closest('.popover-anchor')) setDisplayPanel(false);
+  });
+  $('#display-panel').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); setDisplayPanel(false); $('#display-btn').focus(); }
+  });
+  $('#reset-display').addEventListener('click', () => setPrefs({ ...DEFAULT_PREFS, smooth: S.prefs.smooth }));
+}
+
 // typing in a field or the editor: single-key shortcuts must not fire
 const isTyping = (e) => !!e.target.closest?.('input, select, textarea, [contenteditable], .CodeMirror');
 
@@ -784,6 +801,7 @@ function bindPrefControls() {
 
 function bindUi() {
   bindPrefControls();
+  bindDisplayPanel();
   $('#theme-toggle').addEventListener('click', toggleTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawChart());
   $('#nav-toggle').addEventListener('click', toggleNav);

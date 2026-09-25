@@ -42,6 +42,45 @@
     <button class="icon-btn" id="lab-toggle" aria-label="Lab" aria-controls="lab" aria-expanded="true">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14.5 4v16" stroke="currentColor" stroke-width="1.8"/><path d="M14.5 4h4a2.5 2.5 0 0 1 2.5 2.5v11a2.5 2.5 0 0 1-2.5 2.5h-4z" fill="currentColor" opacity=".35"/></svg>
     </button>
+    <div class="popover-anchor">
+      <button class="icon-btn" id="display-btn" aria-label="Display settings" title="Display settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="display-panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="popover" id="display-panel" role="dialog" aria-label="Display settings" hidden>
+        <section id="display-layout"></section>
+        <section>
+          <h3>Reading</h3>
+          <div class="pref-row"><span>Text size</span>
+            <span class="seg" role="group" aria-label="Lesson text size">
+              <button class="seg-btn" data-pref="proseSize" data-value="s">S</button>
+              <button class="seg-btn" data-pref="proseSize" data-value="m">M</button>
+              <button class="seg-btn" data-pref="proseSize" data-value="l">L</button>
+            </span>
+          </div>
+          <div class="pref-row"><span>Page width</span>
+            <span class="seg" role="group" aria-label="Page width">
+              <button class="seg-btn" data-pref="contentWidth" data-value="narrow">narrow</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="normal">normal</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="wide">wide</button>
+              <button class="seg-btn" data-pref="contentWidth" data-value="full">full</button>
+            </span>
+          </div>
+        </section>
+        <section>
+          <h3>Code</h3>
+          <div class="pref-row"><span>Code size</span><input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></div>
+          <div class="pref-row"><span>Context lines</span>
+            <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
+              <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
+              <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
+            </span>
+          </div>
+          <label class="check pref-row"><input type="checkbox" data-pref="diffWrap"> Wrap long lines</label>
+        </section>
+        <div class="popover-foot"><button class="btn ghost small" id="reset-display">Reset display settings</button></div>
+      </div>
+    </div>
     <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
     </button>
@@ -62,6 +101,7 @@
         <div class="refs" id="lesson-refs"></div>
 
         <section class="card diff-card" aria-label="Code diff">
+          <div class="diff-sticky">
           <div class="card-head">
             <h2>The diff</h2>
             <label class="inline-field">compare with
@@ -88,7 +128,8 @@
           <button class="btn ghost small" data-expand="diff">expand all</button>
           <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap lines</label>
           <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
-        </div>
+          </div>
+          </div>
           <div class="diff" id="diff"></div>
         </section>
 
