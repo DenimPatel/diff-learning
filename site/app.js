@@ -15,7 +15,7 @@ const store = {
 // navW/labW are null until the user drags a pane, so the CSS defaults (and breakpoints) apply.
 const DEFAULT_PREFS = {
   navHidden: false, labHidden: false, navW: null, labW: null, focus: false,
-  ctxLines: 3, diffWrap: false, codeSize: 12.5, contentWidth: 'normal', proseSize: 'm',
+  ctxLines: 3, diffWrap: false, diffLayout: 'unified', wordDiff: true, codeSize: 12.5, contentWidth: 'normal', proseSize: 'm',
   smooth: 0.9,
   knobsCollapsed: false, chartCollapsed: false, consoleCollapsed: false, chartH: 220, consoleH: 220,
 };
@@ -25,7 +25,7 @@ const PREF_CLASSES = {
 };
 const CONTENT_WIDTHS = { narrow: '720px', normal: '920px', wide: '1200px', full: 'none' };
 const PROSE_SIZES = { s: '14px', m: '15px', l: '17px' };
-const DIFF_PREFS = ['ctxLines'];
+const DIFF_PREFS = ['ctxLines', 'diffLayout', 'wordDiff'];
 const LAYOUT_PREFS = ['navHidden', 'labHidden', 'navW', 'labW', 'focus', 'codeSize', 'contentWidth'];
 
 function loadPrefs() {
@@ -85,7 +85,9 @@ function syncPrefControls() {
   });
   // context and expand-all only mean something when the diff folds unchanged lines
   document.querySelectorAll('.diff-tools').forEach(t => {
-    const noFolds = t.classList.contains('pg-tools') ? S.pgMode !== 'diff' : S.diffMode === 'full';
+    const noDiff = t.classList.contains('pg-tools') && S.pgMode !== 'diff'; // the editor is showing
+    const noFolds = noDiff || (!t.classList.contains('pg-tools') && S.diffMode === 'full');
+    t.querySelectorAll('.diff-only').forEach(x => { x.hidden = noDiff; });
     t.querySelector('.ctx-field').hidden = noFolds;
     t.querySelector('[data-expand]').hidden = noFolds;
   });
@@ -287,7 +289,12 @@ const isTyping = (e) => !!e.target.closest?.('input, select, textarea, [contente
 
 // after a pane changes size: CodeMirror measures itself only when told, Chart.js follows its container
 function layoutChanged() {
-  requestAnimationFrame(() => { if (S.editor) S.editor.refresh(); if (chart) chart.resize(); updateResizerAria(); });
+  requestAnimationFrame(() => {
+    if (S.editor) S.editor.refresh();
+    if (chart) chart.resize();
+    updateResizerAria();
+    if (S.prefs.diffLayout === 'split') rerenderDiffs(); // it falls back to unified when the pane is narrow
+  });
 }
 
 function rerenderDiffs() {
@@ -434,17 +441,7 @@ function renderLessonDiff() {
 const hlCache = new Map();
 function highlightLines(code) {
   if (hlCache.has(code)) return hlCache.get(code);
-  const html = hljs.highlight(code, { language: 'python', ignoreIllegals: true }).value;
-  // split into lines, closing and re-opening spans that cross a newline (e.g. docstrings)
-  const lines = []; const stack = []; let cur = '';
-  const re = /(<span[^>]*>)|(<\/span>)|(\n)|([^<\n]+)/g; let m;
-  while ((m = re.exec(html))) {
-    if (m[1]) { stack.push(m[1]); cur += m[1]; }
-    else if (m[2]) { stack.pop(); cur += m[2]; }
-    else if (m[3]) { lines.push(cur + '</span>'.repeat(stack.length)); cur = stack.join(''); }
-    else cur += m[4];
-  }
-  lines.push(cur);
+  const lines = DiffView.splitLines(hljs.highlight(code, { language: 'python', ignoreIllegals: true }).value);
   if (hlCache.size > 200) hlCache.clear();
   hlCache.set(code, lines);
   return lines;
@@ -452,22 +449,46 @@ function highlightLines(code) {
 
 function diffRows(oldCode, newCode) {
   const oldHl = highlightLines(oldCode), newHl = highlightLines(newCode);
+  const oldText = oldCode.split('\n'), newText = newCode.split('\n');
   const rows = []; let o = 0, n = 0;
   for (const part of Diff.diffLines(oldCode, newCode)) {
     const count = part.value.endsWith('\n') ? part.value.split('\n').length - 1 : part.value.split('\n').length;
     for (let k = 0; k < count; k++) {
-      if (part.added) rows.push({ type: 'add', newNo: ++n, html: newHl[n - 1] });
-      else if (part.removed) rows.push({ type: 'del', oldNo: ++o, html: oldHl[o - 1] });
-      else rows.push({ type: 'ctx', oldNo: ++o, newNo: ++n, html: newHl[n - 1] });
+      if (part.added) { n++; rows.push({ type: 'add', newNo: n, html: newHl[n - 1], text: newText[n - 1] }); }
+      else if (part.removed) { o++; rows.push({ type: 'del', oldNo: o, html: oldHl[o - 1], text: oldText[o - 1] }); }
+      else { o++; n++; rows.push({ type: 'ctx', oldNo: o, newNo: n, html: newHl[n - 1], text: newText[n - 1] }); }
     }
   }
   return rows;
 }
 
-function rowHtml(r) {
-  const mark = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' ';
-  return `<tr class="${r.type}"><td class="ln">${r.oldNo || ''}</td><td class="ln">${r.newNo || ''}</td><td class="mk">${mark}</td><td>${r.html || ' '}</td></tr>`;
+// Highlight the words that changed between a removed line and the added line that replaced it.
+// Pairs come from DiffView.pairRows; lines too different to compare keep their plain colors.
+function markWordChanges(pairs) {
+  if (!S.prefs.wordDiff) return;
+  for (const p of pairs) {
+    if (p.type !== 'change' || !p.left || !p.right) continue;
+    const r = DiffView.wordRanges(p.left.text, p.right.text);
+    if (!r) continue;
+    // rows are fresh objects from diffRows, so marking in place also marks the unified view
+    p.left.html = DiffView.markRanges(p.left.html, r.old);
+    p.right.html = DiffView.markRanges(p.right.html, r.new);
+  }
 }
+
+const MARKS = { add: '+', del: '−', ctx: ' ' };
+function rowHtml(r) {
+  return `<tr class="${r.type}"><td class="ln">${r.oldNo || ''}</td><td class="ln">${r.newNo || ''}</td><td class="mk">${MARKS[r.type]}</td><td>${r.html || ' '}</td></tr>`;
+}
+function pairHtml(p) {
+  const side = (r, no) => r
+    ? `<td class="ln ${r.type}">${r[no]}</td><td class="mk ${r.type}">${MARKS[r.type]}</td><td class="code ${r.type}">${r.html || ' '}</td>`
+    : '<td class="ln none"></td><td class="mk none"></td><td class="code none"></td>';
+  return `<tr class="${p.type}">${side(p.left, 'oldNo')}${side(p.right, 'newNo')}</tr>`;
+}
+
+// side-by-side needs room for two columns of code; narrow panes fall back to unified
+const SPLIT_MIN_WIDTH = 640;
 
 function renderDiff(el, oldCode, newCode, mode, statsEl) {
   const rows = diffRows(oldCode, newCode);
@@ -475,27 +496,36 @@ function renderDiff(el, oldCode, newCode, mode, statsEl) {
   if (statsEl) statsEl.innerHTML = `<span class="plus">+${adds}</span> <span class="minus">−${dels}</span>`;
   if (!rows.length) { el.innerHTML = '<div class="empty">An empty file.</div>'; return; }
   if (mode === 'changes' && !adds && !dels) { el.innerHTML = '<div class="empty">No changes: the code is identical.</div>'; return; }
+
+  const split = S.prefs.diffLayout === 'split' && (el.clientWidth || el.parentElement.clientWidth) >= SPLIT_MIN_WIDTH;
+  const pairs = DiffView.pairRows(rows);
+  markWordChanges(pairs);
+  const units = split ? pairs : rows;
+  const toHtml = split ? pairHtml : rowHtml, cols = split ? 6 : 4;
+
   const CTX = S.prefs.ctxLines === 'all' ? Infinity : S.prefs.ctxLines;
   const out = [];
   let i = 0;
-  while (i < rows.length) {
-    if (mode !== 'changes' || rows[i].type !== 'ctx') { out.push(rowHtml(rows[i++])); continue; }
+  while (i < units.length) {
+    if (mode !== 'changes' || units[i].type !== 'ctx') { out.push(toHtml(units[i++])); continue; }
     let j = i;
-    while (j < rows.length && rows[j].type === 'ctx') j++;
-    const run = rows.slice(i, j);
-    const keepHead = i === 0 ? 0 : CTX, keepTail = j === rows.length ? 0 : CTX;
+    while (j < units.length && units[j].type === 'ctx') j++;
+    const run = units.slice(i, j);
+    const keepHead = i === 0 ? 0 : CTX, keepTail = j === units.length ? 0 : CTX;
     if (run.length > keepHead + keepTail + 2) {
       const hidden = run.slice(keepHead, run.length - keepTail);
-      out.push(...run.slice(0, keepHead).map(rowHtml));
-      out.push(`</tbody><tbody class="fold-body"><tr class="fold" tabindex="0" role="button"><td colspan="4">⋯ ${hidden.length} unchanged lines (show)</td></tr></tbody>` +
-        `<tbody hidden>${hidden.map(rowHtml).join('')}</tbody><tbody>`);
-      out.push(...run.slice(run.length - keepTail).map(rowHtml));
+      out.push(...run.slice(0, keepHead).map(toHtml));
+      out.push(`</tbody><tbody class="fold-body"><tr class="fold" tabindex="0" role="button"><td colspan="${cols}">⋯ ${hidden.length} unchanged lines (show)</td></tr></tbody>` +
+        `<tbody hidden>${hidden.map(toHtml).join('')}</tbody><tbody>`);
+      out.push(...run.slice(run.length - keepTail).map(toHtml));
     } else {
-      out.push(...run.map(rowHtml));
+      out.push(...run.map(toHtml));
     }
     i = j;
   }
-  el.innerHTML = `<table><tbody>${out.join('')}</tbody></table>`;
+  const colgroup = split ? '<colgroup><col class="c-ln"><col class="c-mk"><col><col class="c-ln"><col class="c-mk"><col></colgroup>' : '';
+  el.classList.toggle('split', split);
+  el.innerHTML = `<table>${colgroup}<tbody>${out.join('')}</tbody></table>`;
   el.querySelectorAll('tr.fold').forEach(tr => {
     tr.addEventListener('click', () => openFold(tr));
     tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFold(tr); } });

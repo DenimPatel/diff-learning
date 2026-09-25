@@ -17,6 +17,8 @@
   --del-num: #f8d4d4;
   --del-mark: #c62828;
   --fold-bg: #eef3fa;
+  --add-word: rgba(26, 127, 55, .22);
+  --del-word: rgba(198, 40, 40, .2);
   --code-bg: #f7f6f3;
   --shadow: 0 1px 2px rgba(20, 20, 18, .06), 0 2px 8px rgba(20, 20, 18, .04);
   /* syntax */
@@ -42,6 +44,7 @@
     --add-bg: #14301d; --add-num: #1b3d25; --add-mark: #4ac26b;
     --del-bg: #3a1618; --del-num: #4a1c1f; --del-mark: #ff7b72;
     --fold-bg: #1c2533; --code-bg: #161615;
+    --add-word: rgba(74, 194, 107, .3); --del-word: rgba(255, 123, 114, .3);
     --shadow: 0 1px 2px rgba(0, 0, 0, .4);
     --syn-kw: #c5a3ff; --syn-str: #7ee787; --syn-num: #ffa657; --syn-com: #8f8e86; --syn-fn: #79c0ff; --syn-builtin: #56d4c6;
     --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
@@ -57,6 +60,7 @@
   --add-bg: #14301d; --add-num: #1b3d25; --add-mark: #4ac26b;
   --del-bg: #3a1618; --del-num: #4a1c1f; --del-mark: #ff7b72;
   --fold-bg: #1c2533; --code-bg: #161615;
+  --add-word: rgba(74, 194, 107, .3); --del-word: rgba(255, 123, 114, .3);
   --shadow: 0 1px 2px rgba(0, 0, 0, .4);
   --syn-kw: #c5a3ff; --syn-str: #7ee787; --syn-num: #ffa657; --syn-com: #8f8e86; --syn-fn: #79c0ff; --syn-builtin: #56d4c6;
   --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
@@ -257,6 +261,27 @@ select { background: var(--surface); border: 1px solid var(--border); border-rad
 .diff tr.fold td { background: var(--fold-bg); color: var(--accent); cursor: pointer; padding: 3px 10px; font-family: Inter, sans-serif; font-size: 12.5px; }
 .diff tr.fold:hover td { text-decoration: underline; }
 .diff-wrap .diff td:not(.ln):not(.mk) { white-space: pre-wrap; word-break: break-word; }
+
+/* word-level changes inside a changed line */
+.diff mark.wd { color: inherit; border-radius: 3px; padding: 1px 0; }
+.diff tr.add mark.wd, .diff td.add mark.wd { background: var(--add-word); }
+.diff tr.del mark.wd, .diff td.del mark.wd { background: var(--del-word); }
+
+/* side-by-side: before | after, always wrapped so the two halves stay aligned */
+.diff.split table { table-layout: fixed; }
+.diff.split col.c-ln { width: 3.4em; }
+.diff.split col.c-mk { width: 1.4em; }
+.diff.split td.code { white-space: pre-wrap; word-break: break-word; }
+.diff.split td.ln { width: auto; min-width: 0; }
+.diff.split td.mk { width: auto; }
+.diff.split td.code.none + td.ln, .diff.split td.code:nth-child(3) { border-right: 1px solid var(--border); }
+.diff.split td.add { background: var(--add-bg); }
+.diff.split td.ln.add { background: var(--add-num); }
+.diff.split td.mk.add { color: var(--add-mark); }
+.diff.split td.del { background: var(--del-bg); }
+.diff.split td.ln.del { background: var(--del-num); }
+.diff.split td.mk.del { color: var(--del-mark); }
+.diff.split td.none { background: var(--surface-2); }
 .diff .empty { padding: 18px; color: var(--text-3); font-family: Inter, sans-serif; }
 
 /* syntax (highlight.js + CodeMirror share the palette) */

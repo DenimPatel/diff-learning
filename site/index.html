@@ -87,6 +87,13 @@
               <button class="seg-btn" data-pref="ctxLines" data-value="all">all</button>
             </span>
           </div>
+          <div class="pref-row"><span>Diff layout</span>
+            <span class="seg" role="group" aria-label="Diff layout">
+              <button class="seg-btn" data-pref="diffLayout" data-value="unified">unified</button>
+              <button class="seg-btn" data-pref="diffLayout" data-value="split">split</button>
+            </span>
+          </div>
+          <label class="check pref-row"><span><input type="checkbox" data-pref="wordDiff"> Highlight changed words</span></label>
           <label class="check pref-row"><span><input type="checkbox" data-pref="diffWrap"> Wrap long lines</span></label>
         </section>
         <div class="popover-foot"><button class="btn ghost small" id="show-shortcuts">Keyboard shortcuts <kbd>?</kbd></button><span class="spacer"></span><button class="btn ghost small" id="reset-display">Reset to defaults</button></div>
@@ -131,6 +138,10 @@
             <button class="btn small" id="open-playground">Edit in Playground →</button>
           </div>
           <div class="diff-tools" role="group" aria-label="Diff display">
+          <span class="seg diff-only" role="group" aria-label="Diff layout">
+            <button class="seg-btn" data-pref="diffLayout" data-value="unified" title="One column: removed lines above added ones">unified</button>
+            <button class="seg-btn" data-pref="diffLayout" data-value="split" title="Two columns: before on the left, after on the right">split</button>
+          </span>
           <span class="inline-field ctx-field">context
             <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
               <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
@@ -139,7 +150,8 @@
             </span>
           </span>
           <button class="btn ghost small" data-expand="diff">expand all</button>
-          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap lines</label>
+          <label class="check diff-only" title="Highlight the exact words that changed inside a line"><input type="checkbox" data-pref="wordDiff"> words</label>
+          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap</label>
           <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
           </div>
           </div>
@@ -164,7 +176,11 @@
         </div>
         <p class="hint">Your edits are saved in this browser. Add <code># @param {"min": 0, "max": 1}</code> to any assignment to get a knob in the lab. Print lines like <code>step 3 | loss 2.1</code> to chart them.</p>
         <div class="diff-tools pg-tools" role="group" aria-label="Diff display">
-        <span class="inline-field ctx-field">context
+        <span class="seg diff-only" role="group" aria-label="Diff layout">
+            <button class="seg-btn" data-pref="diffLayout" data-value="unified" title="One column: removed lines above added ones">unified</button>
+            <button class="seg-btn" data-pref="diffLayout" data-value="split" title="Two columns: before on the left, after on the right">split</button>
+          </span>
+          <span class="inline-field ctx-field">context
           <span class="seg" role="group" aria-label="Unchanged lines shown around each change">
             <button class="seg-btn" data-pref="ctxLines" data-value="3">3</button>
             <button class="seg-btn" data-pref="ctxLines" data-value="10">10</button>
@@ -172,7 +188,8 @@
           </span>
         </span>
         <button class="btn ghost small" data-expand="pg-diff">expand all</button>
-        <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap lines</label>
+        <label class="check diff-only" title="Highlight the exact words that changed inside a line"><input type="checkbox" data-pref="wordDiff"> words</label>
+          <label class="check"><input type="checkbox" data-pref="diffWrap"> wrap</label>
         <label class="inline-field">text size <input type="range" data-pref="codeSize" min="11" max="16" step="0.5" aria-label="Code text size"></label>
         </div>
         <div class="editor-wrap" id="pg-editor-wrap"><textarea id="pg-editor"></textarea></div>
@@ -263,6 +280,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/python/python.min.js"></script>
   <script src="params.js"></script>
+  <script src="diff.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
