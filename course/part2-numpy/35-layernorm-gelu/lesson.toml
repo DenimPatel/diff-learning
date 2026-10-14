@@ -1,0 +1,32 @@
+title = "LayerNorm, GELU and post-norm"
+parent = "21-numpy-gpt"
+variant = true
+summary = "The original Transformer and GPT-2 choices (LayerNorm, GELU, post-norm) next to the modern ones (RMSNorm, SiLU, pre-norm), as switchable knobs. Deep post-norm networks at high learning rates show why pre-norm won."
+tags = ["normalization", "activation", "layernorm", "gelu", "architecture"]
+updated = 2026-10-14
+
+[[references]]
+title = "Layer Normalization (Ba, Kiros & Hinton, 2016)"
+url = "https://arxiv.org/abs/1607.06450"
+[[references]]
+title = "Gaussian Error Linear Units (GELUs) (Hendrycks & Gimpel, 2016)"
+url = "https://arxiv.org/abs/1606.08415"
+[[references]]
+title = "On Layer Normalization in the Transformer Architecture (pre- vs post-norm, Xiong et al., 2020)"
+url = "https://arxiv.org/abs/2002.04745"
+[[references]]
+title = "Root Mean Square Layer Normalization (Zhang & Sennrich, 2019)"
+url = "https://arxiv.org/abs/1910.07467"
+
+[[experiments]]
+name = "GPT-2 recipe"
+description = "LayerNorm + GELU, pre-norm: about the same as RMSNorm + ReLU at this size."
+params = { norm_type = "layernorm", activation = "gelu" }
+[[experiments]]
+name = "Deep post-norm, high LR"
+description = "6 layers, post-norm, learning rate 0.03: training struggles (loss ~2.8)."
+params = { norm_position = "post", n_layer = 6, learning_rate = 0.03 }
+[[experiments]]
+name = "Deep pre-norm, high LR"
+description = "The same, with pre-norm: it trains fine (loss ~2.3). Overlay it on the previous run."
+params = { norm_position = "pre", n_layer = 6, learning_rate = 0.03 }
