@@ -1,0 +1,32 @@
+title = "Decoding strategies"
+parent = "60-kv-cache"
+variant = true
+summary = "Greedy, sampling, min-p, beam search and repetition penalties: the same model and weights give very different text depending on how the next token is picked."
+tags = ["decoding", "sampling", "beam search", "min-p", "inference"]
+updated = 2026-10-14
+
+[[references]]
+title = "The Curious Case of Neural Text Degeneration (top-p / nucleus sampling, Holtzman et al., 2019)"
+url = "https://arxiv.org/abs/1904.09751"
+[[references]]
+title = "Turning Up the Heat: Min-p Sampling for Creative and Coherent LLM Outputs (Nguyen et al., 2024)"
+url = "https://arxiv.org/abs/2407.01082"
+[[references]]
+title = "CTRL: A Conditional Transformer Language Model (repetition penalty, Keskar et al., 2019)"
+url = "https://arxiv.org/abs/1909.05858"
+[[references]]
+title = "How to generate text: decoding methods with Transformers (Hugging Face)"
+url = "https://huggingface.co/blog/how-to-generate"
+
+[[experiments]]
+name = "Greedy"
+description = "Deterministic: the same name every time, and a real one. The most likely sequence is rarely the most interesting."
+params = { strategy = "greedy" }
+[[experiments]]
+name = "Beam search, short names"
+description = "length_penalty = 0 ranks by total log-probability, so short, common names win. With 1 (the default), long names win instead."
+params = { strategy = "beam", beam_width = 16, length_penalty = 0 }
+[[experiments]]
+name = "Hot sampling + repetition penalty"
+description = "temperature 1 and penalty 2: no real names left. Names legitimately repeat letters (anna, elle), so the penalty hurts here."
+params = { strategy = "sample", temperature = 1.0, repetition_penalty = 2.0 }
