@@ -1,0 +1,36 @@
+title = "Optimizer zoo: Lion, Adafactor, SGD"
+parent = "40-evaluation"
+variant = true
+summary = "Swap Adam for Lion (sign of momentum, one buffer), Adafactor (factored second moments, almost no memory) or plain SGD with momentum, and compare the curves and the optimizer memory each one needs."
+tags = ["optimizer", "lion", "adafactor", "sgd", "memory"]
+updated = 2026-10-14
+
+[[references]]
+title = "Symbolic Discovery of Optimization Algorithms (Lion, Chen et al., 2023)"
+url = "https://arxiv.org/abs/2302.06675"
+[[references]]
+title = "Adafactor: Adaptive Learning Rates with Sublinear Memory Cost (Shazeer & Stern, 2018)"
+url = "https://arxiv.org/abs/1804.04235"
+[[references]]
+title = "Benchmarking Optimizers for Large Language Model Pretraining (Semenov et al., 2025)"
+url = "https://arxiv.org/abs/2509.01440"
+[[references]]
+title = "Fantastic Pretraining Optimizers and Where to Find Them (Wen et al., 2025)"
+url = "https://arxiv.org/abs/2509.02046"
+
+[[experiments]]
+name = "Adam"
+description = "The baseline (lessons 05, 21, 40). Overlay the others on it."
+params = { optimizer = "adam" }
+[[experiments]]
+name = "Adafactor"
+description = "Matches Adam here, with optimizer state of 1,500 numbers instead of 54,000."
+params = { optimizer = "adafactor" }
+[[experiments]]
+name = "SGD with momentum"
+description = "One step size for every weight: it trains, but clearly slower than the adaptive methods."
+params = { optimizer = "sgd" }
+[[experiments]]
+name = "SGD, too hot"
+description = "learning_rate 0.03 (x30 for SGD): diverges to nan. Without per-weight normalization, the step size is much more fragile."
+params = { optimizer = "sgd", learning_rate = 0.03 }
