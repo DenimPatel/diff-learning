@@ -12,6 +12,6 @@ Here the draft is an n-gram table: counts of which character follows the last 1 
 The accept/reject rule is rejection sampling: the tokens come out distributed **exactly** like samples from the target alone. Speculative decoding is lossless, unlike quantization or distillation. The script checks this empirically. Plain and speculative samples have the same statistics up to sampling noise.
 
 ### What to try
-Read `tokens per pass`: with the trigram draft about 2.4 tokens come out of each target pass. Try **Bigram draft** and **Guess 8 ahead**. The speedup depends on the acceptance rate, so it is largest for predictable text (code, structured output, low temperature).
+Read `tokens per pass`: with the trigram draft about 2.4 tokens come out of each target pass. Try **Bigram draft** and **Guess 8 ahead**. The speedup depends entirely on how often the draft agrees with the target, so it is largest for predictable text (code, structured output) and a draft trained to imitate the target. **Cold** shows that a low temperature only helps if the two models share the same favorite tokens.
 
 **Up to date:** speculative decoding is built into vLLM, SGLang, TensorRT-LLM and llama.cpp, and is used to serve most frontier models. EAGLE-3 and MTP heads trained with the model reach 3–4 accepted tokens per pass, and *tree* speculation verifies several candidate branches at once.

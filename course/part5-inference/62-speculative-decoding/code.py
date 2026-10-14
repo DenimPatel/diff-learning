@@ -268,9 +268,9 @@ def target_probs(logits):
     return probs / probs.sum(-1, keepdims=True)
 
 def generate_speculative():
-    tokens, cache, rounds, accepted = [BOS], [], 0, 0
-    gpt(np.array([[BOS]]), cache) # invariant: the cache holds every token except the last one... after this, all of them
-    cache[:] = [(k[:, :, :0], v[:, :, :0]) for k, v in cache] # ...so start it empty
+    tokens, rounds, accepted = [BOS], 0, 0
+    empty = np.zeros((1, n_head, 0, head_dim))
+    cache = [(empty, empty) for _ in range(n_layer)] # invariant: the cache holds every token except the last one
     while tokens[-1] != BOS or len(tokens) == 1:
         k = min(spec_k, block_size - len(tokens)) # positions must stay inside the context window
         if k <= 0:

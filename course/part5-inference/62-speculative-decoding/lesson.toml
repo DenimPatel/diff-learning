@@ -28,5 +28,5 @@ description = "spec_k = 8: long guesses rarely survive to the end, so the gain o
 params = { spec_k = 8 }
 [[experiments]]
 name = "Cold"
-description = "temperature 0.1: the target is nearly deterministic, and a good draft is accepted more often."
+description = "temperature 0.1: both models become nearly deterministic, so a guess survives only if the draft's favorite is the target's favorite. Here they often disagree, and acceptance drops."
 params = { temperature = 0.1 }
