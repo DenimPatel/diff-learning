@@ -1,0 +1,29 @@
+title = "Dropout"
+parent = "40-evaluation"
+variant = true
+summary = "Randomly zero activations while training so the network can't lean on any single unit. A strong regularizer when data is scarce, and unnecessary when it is plentiful."
+tags = ["regularization", "dropout", "overfitting"]
+updated = 2026-10-14
+
+[[references]]
+title = "Dropout: A Simple Way to Prevent Neural Networks from Overfitting (Srivastava et al., 2014)"
+url = "https://jmlr.org/papers/v15/srivastava14a.html"
+[[references]]
+title = "Attention Is All You Need (2017): dropout 0.1 on attention and residual branches"
+url = "https://arxiv.org/abs/1706.03762"
+[[references]]
+title = "Drop Dropout on Single-Epoch Language Model Pretraining (Liu et al., 2025)"
+url = "https://arxiv.org/abs/2505.24788"
+
+[[experiments]]
+name = "300 names, no dropout"
+description = "1% of the data and a wider model: train loss goes toward 0.4 while val climbs past 6."
+params = { data_fraction = 0.01, n_embd = 64, num_steps = 600, dropout_p = 0.0 }
+[[experiments]]
+name = "300 names, dropout 0.3"
+description = "The same with dropout: val stays near 2.9. Overlay the two runs on the val chart."
+params = { data_fraction = 0.01, n_embd = 64, num_steps = 600, dropout_p = 0.3 }
+[[experiments]]
+name = "All data, no dropout"
+description = "With 29k names nothing overfits, so dropout only slows learning. Compare val with the default 0.1."
+params = { dropout_p = 0.0 }
