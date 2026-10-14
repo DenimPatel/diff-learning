@@ -1,0 +1,29 @@
+title = "QLoRA"
+parent = "52-lora"
+variant = true
+summary = "LoRA on top of a 4-bit base model: NF4 quantization for the frozen weights, full-precision adapters, and the same results as LoRA for a quarter of the memory."
+tags = ["qlora", "lora", "quantization", "nf4", "peft"]
+updated = 2026-10-14
+
+[[references]]
+title = "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)"
+url = "https://arxiv.org/abs/2305.14314"
+[[references]]
+title = "bitsandbytes: 4-bit quantization (NF4, FP4)"
+url = "https://huggingface.co/docs/bitsandbytes/main/en/reference/nn/linear4bit"
+[[references]]
+title = "Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA (Hugging Face)"
+url = "https://huggingface.co/blog/4bit-transformers-bitsandbytes"
+
+[[experiments]]
+name = "No quantization"
+description = "quant_type = none is exactly lesson 52. Compare exact match: 4 bits cost almost nothing."
+params = { quant_type = "none" }
+[[experiments]]
+name = "int4 instead of NF4"
+description = "Evenly spaced levels: the base model loses a little more than with NF4."
+params = { quant_type = "int4" }
+[[experiments]]
+name = "Bigger groups"
+description = "quant_group = 32: fewer scales, a bit more quantization error."
+params = { quant_group = 32 }

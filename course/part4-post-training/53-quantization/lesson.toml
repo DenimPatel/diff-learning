@@ -27,7 +27,7 @@ description = "One scale per matrix: still fine at 8 bits, noticeably worse at 3
 params = { granularity = "tensor" }
 [[experiments]]
 name = "An outlier channel, per-tensor"
-description = "outlier_scale = 30 leaves the model's function unchanged but plants a few huge weights. With one scale per matrix, int4 is now badly hurt."
+description = "outlier_scale = 30 leaves the model's function unchanged but plants a few huge weights. With one scale per matrix, int4 is now clearly hurt."
 params = { granularity = "tensor", outlier_scale = 30 }
 [[experiments]]
 name = "An outlier channel, group-wise"
