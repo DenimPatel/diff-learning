@@ -1,0 +1,32 @@
+title = "QK-norm"
+parent = "21-numpy-gpt"
+variant = true
+summary = "RMSNorm each head's queries and keys before the dot product. Attention logits can no longer grow without bound, which removes a common cause of loss spikes in large training runs."
+tags = ["attention", "normalization", "training stability"]
+updated = 2026-10-14
+
+[[references]]
+title = "Scaling Vision Transformers to 22 Billion Parameters (Dehghani et al., 2023): QK-norm against attention-logit growth"
+url = "https://arxiv.org/abs/2302.05442"
+[[references]]
+title = "Small-scale proxies for large-scale Transformer training instabilities (Wortsman et al., 2023)"
+url = "https://arxiv.org/abs/2309.14322"
+[[references]]
+title = "2 OLMo 2 Furious (OLMo 2, 2024): QK-norm for stable training"
+url = "https://arxiv.org/abs/2501.00656"
+[[references]]
+title = "Qwen3 Technical Report (2025)"
+url = "https://arxiv.org/abs/2505.09388"
+
+[[experiments]]
+name = "Without QK-norm"
+description = "qk_norm = false is lesson 21. Switch the chart to max_attn_logit: it climbs to ~20 instead of staying near 4."
+params = { qk_norm = false }
+[[experiments]]
+name = "High LR, no QK-norm"
+description = "learning_rate 0.1 without QK-norm: attention logits in the hundreds, so softmax is one-hot and its gradient vanishes."
+params = { learning_rate = 0.1, qk_norm = false }
+[[experiments]]
+name = "High LR, with QK-norm"
+description = "The same learning rate with QK-norm: attention logits stay small. (The loss still spikes: the output layer has its own instability, see z-loss in lesson 46.)"
+params = { learning_rate = 0.1 }
