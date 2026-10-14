@@ -1,0 +1,32 @@
+title = "Speculative decoding"
+parent = "60-kv-cache"
+variant = true
+summary = "A cheap draft guesses several tokens, and the big model checks them all in one pass. A rejection-sampling rule keeps the output distribution exactly the target's while using ~2.4x fewer target passes."
+tags = ["speculative decoding", "inference", "latency", "rejection sampling"]
+updated = 2026-10-14
+
+[[references]]
+title = "Fast Inference from Transformers via Speculative Decoding (Leviathan, Kalman & Matias, 2022)"
+url = "https://arxiv.org/abs/2211.17192"
+[[references]]
+title = "Accelerating Large Language Model Decoding with Speculative Sampling (Chen et al., DeepMind, 2023)"
+url = "https://arxiv.org/abs/2302.01318"
+[[references]]
+title = "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty (Li et al., 2024)"
+url = "https://arxiv.org/abs/2401.15077"
+[[references]]
+title = "Prompt lookup decoding: n-gram drafts from the prompt"
+url = "https://github.com/apoorvumang/prompt-lookup-decoding"
+
+[[experiments]]
+name = "Bigram draft"
+description = "A weaker draft: fewer guesses accepted, more target passes per name."
+params = { draft_type = "bigram" }
+[[experiments]]
+name = "Guess 8 ahead"
+description = "spec_k = 8: long guesses rarely survive to the end, so the gain over k = 4 is small, and each pass verifies more positions."
+params = { spec_k = 8 }
+[[experiments]]
+name = "Cold"
+description = "temperature 0.1: the target is nearly deterministic, and a good draft is accepted more often."
+params = { temperature = 0.1 }
