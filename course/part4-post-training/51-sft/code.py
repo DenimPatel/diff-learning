@@ -345,7 +345,7 @@ def response_accuracy(): # fraction of response tokens predicted right on held-o
 
 # Fine-tuning is the same training loop with a different batch and loss, a fresh optimizer and a smaller learning rate
 ft_learning_rate = 0.003 # @param {"min": 0.0001, "max": 0.03, "log": true} peak step size while fine-tuning
-num_steps = 300 # @param {"min": 1, "max": 3000, "log": true} number of fine-tuning steps
+num_steps = 400 # @param {"min": 1, "max": 3000, "log": true} number of fine-tuning steps
 m = [np.zeros_like(p.data) for p in params] # new optimizer state: the wte and lm_head shapes changed
 v = [np.zeros_like(p.data) for p in params]
 for step in range(num_steps):
