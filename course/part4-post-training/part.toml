@@ -1,0 +1,2 @@
+title = "Part 4 · Beyond pretraining"
+summary = "A pretrained model only continues text. Here we save it as a checkpoint and adapt it: supervised fine-tuning, LoRA and QLoRA, quantization, distillation, and preference and RL training with DPO and GRPO."

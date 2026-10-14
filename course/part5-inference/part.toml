@@ -1,0 +1,2 @@
+title = "Part 5 · Inference"
+summary = "Serving a model is a different problem from training it. A KV cache, decoding strategies, speculative decoding and constrained decoding make generation faster, better or guaranteed to be well formed."

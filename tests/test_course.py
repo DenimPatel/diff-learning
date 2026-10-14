@@ -20,7 +20,7 @@ from course import load  # noqa: E402
 
 COURSE = load()
 LESSONS = COURSE["lessons"]
-QUICK = {"num_steps": 3, "num_samples": 2}  # enough to exercise every code path
+QUICK = {"num_steps": 3, "pretrain_steps": 3, "num_samples": 2}  # enough to exercise every code path
 METRIC_LINE = re.compile(r"^step\s+\d+.*\|\s*loss\s+-?[\d.]+", re.M)
 
 
