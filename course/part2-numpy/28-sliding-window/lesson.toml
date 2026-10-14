@@ -15,8 +15,8 @@ url = "https://arxiv.org/abs/2310.06825"
 title = "Gemma 3 Technical Report (2025): 5 local layers per global layer"
 url = "https://arxiv.org/abs/2503.19786"
 [[references]]
-title = "A Visual Guide to Attention Variants in Modern LLMs (Sebastian Raschka)"
-url = "https://magazine.sebastianraschka.com/"
+title = "OlmPool (Ai2): how attention-efficiency choices interact"
+url = "https://allenai.org/blog/olmpool"
 
 [[experiments]]
 name = "Window 1"
