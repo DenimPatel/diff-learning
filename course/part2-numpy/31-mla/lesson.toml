@@ -1,0 +1,25 @@
+title = "Multi-head latent attention (MLA)"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Compress each token into a small latent vector and expand it into per-head keys and values on the fly. The KV cache stores only the latent: 8x smaller here, ~93% smaller in DeepSeek-V2."
+tags = ["attention", "kv cache", "mla", "low-rank", "deepseek"]
+updated = 2026-10-14
+
+[[references]]
+title = "DeepSeek-V2: A Strong, Economical, and Efficient MoE Language Model (introduces MLA, 2024)"
+url = "https://arxiv.org/abs/2405.04434"
+[[references]]
+title = "DeepSeek-V3 Technical Report (2024)"
+url = "https://arxiv.org/abs/2412.19437"
+[[references]]
+title = "TransMLA: Multi-head Latent Attention Is All You Need (converting GQA models to MLA, 2025)"
+url = "https://arxiv.org/abs/2502.07864"
+
+[[experiments]]
+name = "Latent of 2"
+description = "Each token keeps just 2 numbers per layer. How much worse is the loss?"
+params = { kv_latent = 2 }
+[[experiments]]
+name = "Latent of 32"
+description = "kv_latent = n_embd: no compression of the cache (it would be half of MHA's, since K and V share it)."
+params = { kv_latent = 32 }
