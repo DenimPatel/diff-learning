@@ -12,9 +12,6 @@ url = "https://arxiv.org/abs/2302.06675"
 title = "Adafactor: Adaptive Learning Rates with Sublinear Memory Cost (Shazeer & Stern, 2018)"
 url = "https://arxiv.org/abs/1804.04235"
 [[references]]
-title = "Benchmarking Optimizers for Large Language Model Pretraining (Semenov et al., 2025)"
-url = "https://arxiv.org/abs/2509.01440"
-[[references]]
 title = "Fantastic Pretraining Optimizers and Where to Find Them (Wen et al., 2025)"
 url = "https://arxiv.org/abs/2509.02046"
 
@@ -24,7 +21,7 @@ description = "The baseline (lessons 05, 21, 40). Overlay the others on it."
 params = { optimizer = "adam" }
 [[experiments]]
 name = "Adafactor"
-description = "Matches Adam here, with optimizer state of 1,500 numbers instead of 54,000."
+description = "Matches Adam here, with about 1,300 numbers of optimizer state instead of Adam's 54,000."
 params = { optimizer = "adafactor" }
 [[experiments]]
 name = "SGD with momentum"
