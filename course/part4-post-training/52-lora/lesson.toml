@@ -1,0 +1,32 @@
+title = "LoRA"
+parent = "51-sft"
+variant = true
+summary = "Freeze the base model and learn a low-rank update W + (α/r)·A·B next to each weight matrix. A small fraction of the parameters to train, a tiny adapter file, and it merges back at no inference cost."
+tags = ["lora", "peft", "fine-tuning", "low-rank"]
+updated = 2026-10-14
+
+[[references]]
+title = "LoRA: Low-Rank Adaptation of Large Language Models (Hu et al., 2021)"
+url = "https://arxiv.org/abs/2106.09685"
+[[references]]
+title = "LoRA Learns Less and Forgets Less (Biderman et al., 2024)"
+url = "https://arxiv.org/abs/2405.09673"
+[[references]]
+title = "LoRA Without Regret (Thinking Machines, 2025): when LoRA matches full fine-tuning"
+url = "https://thinkingmachines.ai/blog/lora/"
+[[references]]
+title = "Hugging Face PEFT: LoRA"
+url = "https://huggingface.co/docs/peft/main/en/conceptual_guides/lora"
+
+[[experiments]]
+name = "Rank 1"
+description = "One direction per matrix (4% of the parameters) is not enough for this task: exact match stays at 0."
+params = { lora_rank = 1 }
+[[experiments]]
+name = "Attention only"
+description = "The original LoRA paper only adapted attention. Here adapting the MLPs and lm_head too matters a lot."
+params = { lora_targets = "attn" }
+[[experiments]]
+name = "alpha too high"
+description = "alpha = 32 (scale 8) amplifies every update 4x: training is unstable and learns almost nothing."
+params = { lora_alpha = 32 }
