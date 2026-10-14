@@ -1,0 +1,36 @@
+title = "z-loss and label smoothing"
+parent = "40-evaluation"
+variant = true
+summary = "Two extra loss terms for the output layer: PaLM's z-loss keeps the softmax normalizer near zero for numerical stability, and label smoothing stops the model from pushing probabilities to exactly 0 or 1."
+tags = ["stability", "regularization", "loss", "logits"]
+updated = 2026-10-14
+
+[[references]]
+title = "PaLM: Scaling Language Modeling with Pathways (Chowdhery et al., 2022): z-loss"
+url = "https://arxiv.org/abs/2204.02311"
+[[references]]
+title = "ST-MoE: Designing Stable and Transferable Sparse Expert Models (router z-loss, Zoph et al., 2022)"
+url = "https://arxiv.org/abs/2202.08906"
+[[references]]
+title = "Rethinking the Inception Architecture (label smoothing, Szegedy et al., 2015)"
+url = "https://arxiv.org/abs/1512.00567"
+[[references]]
+title = "When Does Label Smoothing Help? (Müller, Kornblith & Hinton, 2019)"
+url = "https://arxiv.org/abs/1906.02629"
+
+[[experiments]]
+name = "Strong z-loss"
+description = "z_loss_coef = 0.01: log_z drops from ~4 to ~0 at no cost to val. The model just shifts all its logits down."
+params = { z_loss_coef = 0.01 }
+[[experiments]]
+name = "High LR, no z-loss"
+description = "learning_rate 0.05 and no z-loss: log_z drifts up and val ends around 2.34."
+params = { learning_rate = 0.05, z_loss_coef = 0.0 }
+[[experiments]]
+name = "High LR, strong z-loss"
+description = "The same learning rate with z-loss 0.01: val ends around 2.29. Overlay the two."
+params = { learning_rate = 0.05, z_loss_coef = 0.01 }
+[[experiments]]
+name = "Label smoothing 0.1"
+description = "Val loss gets *worse*: label smoothing trades likelihood for calibration and robustness, and val loss measures exactly likelihood."
+params = { label_smoothing = 0.1 }
