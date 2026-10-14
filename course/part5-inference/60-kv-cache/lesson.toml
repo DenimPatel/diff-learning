@@ -1,0 +1,24 @@
+title = "KV cache"
+parent = "21-numpy-gpt"
+summary = "Generate one token at a time without recomputing the past: store each layer's keys and values and feed in only the newest token. The same samples with O(T) instead of O(T²) work."
+tags = ["inference", "kv cache", "attention", "milestone"]
+updated = 2026-10-14
+
+[[references]]
+title = "Transformer Inference Arithmetic (kipply, 2022)"
+url = "https://kipp.ly/transformer-inference-arithmetic/"
+[[references]]
+title = "Efficient Memory Management for LLM Serving with PagedAttention (vLLM, Kwon et al., 2023)"
+url = "https://arxiv.org/abs/2309.06180"
+[[references]]
+title = "Hugging Face: KV cache strategies"
+url = "https://huggingface.co/docs/transformers/kv_cache"
+
+[[experiments]]
+name = "More samples"
+description = "50 names make the timing more stable. Compare the positions processed."
+params = { num_samples = 50 }
+[[experiments]]
+name = "Deeper model"
+description = "4 layers: the cache grows with depth (2 x layers x positions x n_embd)."
+params = { n_layer = 4 }
