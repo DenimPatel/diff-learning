@@ -1,0 +1,28 @@
+title = "Attention sinks"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Softmax forces every head to attend somewhere. Give each head an extra 'nothing' slot (a learned sink logit, or softmax-off-by-one) so that it can opt out, instead of dumping attention on the first token."
+tags = ["attention", "attention sinks", "softmax", "quantization", "streaming"]
+updated = 2026-10-14
+
+[[references]]
+title = "Efficient Streaming Language Models with Attention Sinks (StreamingLLM, Xiao et al., 2023)"
+url = "https://arxiv.org/abs/2309.17453"
+[[references]]
+title = "Attention Is Off By One (Evan Miller, 2023)"
+url = "https://www.evanmiller.org/attention-is-off-by-one.html"
+[[references]]
+title = "gpt-oss-120b & gpt-oss-20b Model Card (OpenAI, 2025): learned attention sinks"
+url = "https://arxiv.org/abs/2508.10925"
+[[references]]
+title = "Gated Attention for Large Language Models (Qiu et al., 2025): sink-free attention via output gating"
+url = "https://arxiv.org/abs/2505.06708"
+
+[[experiments]]
+name = "No sink"
+description = "Plain softmax (lesson 21). bos_mass goes up: heads with nothing to do park their attention on BOS tokens."
+params = { sink = "none" }
+[[experiments]]
+name = "Softmax off by one"
+description = "A fixed sink logit of 0, i.e. 1 is added to the softmax denominator. No new parameters."
+params = { sink = "off-by-one" }
