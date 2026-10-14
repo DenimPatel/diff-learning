@@ -23,4 +23,4 @@ Run **Wide, standard, LR 0.03** and **Wide, μP, LR 0.03**. A sweep we ran:
 
 In SP the best learning rate moved by 10×. In μP it stayed, and the wide model is better at the narrow model's best setting. That is **hyperparameter transfer**: tune on a small proxy, train the big model once.
 
-**Up to date:** μP or its descendants are used to tune large runs (Cerebras-GPT, MiniCPM, xAI's Grok reportedly, many labs privately). Newer work extends transfer to depth (depth-μP, CompleteP) and to optimizers like Muon, which bake similar width scaling into their update.
+**Up to date:** μP or its descendants are used to tune large runs (Cerebras-GPT, MiniCPM and others). Newer work extends transfer to depth (depth-μP, CompleteP) and to optimizers like Muon, which bake similar width scaling into their update.
