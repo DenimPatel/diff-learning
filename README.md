@@ -2,7 +2,12 @@
 
 **Build a GPT from an empty file, one diff at a time, and run every step in your browser.**
 
-Inspired by Karpathy's [microgpt.py](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95), a complete GPT in about 200 lines of dependency-free Python. This course starts from an empty file and adds **one concept per lesson** (data, autograd, loss, optimizer, attention, …). Each lesson shows exactly the **diff** that concept needs. From there it branches into the pieces modern LLMs use: RoPE, GQA, SwiGLU, mixture of experts, Muon, and more.
+Inspired by Karpathy's [microgpt.py](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95), a complete GPT in about 200 lines of dependency-free Python. This course starts from an empty file and adds **one concept per lesson** (data, autograd, loss, optimizer, attention, …). Each lesson shows exactly the **diff** that concept needs. From there it branches into the tricks of the trade behind modern LLMs:
+
+- **Architecture**: RoPE, GQA, MLA, sliding windows, QK-norm, attention sinks, SwiGLU, mixture of experts, linear attention
+- **Training**: validation, dropout, WSD schedules, mixed precision, μP, z-loss, Muon and other optimizers, BPE
+- **Post-training**: checkpoints, SFT, LoRA, QLoRA, quantization, distillation, DPO, GRPO
+- **Inference**: KV cache, decoding strategies, speculative decoding, constrained decoding
 
 - 📖 **Read** a short explanation.
 - ± **Study the diff** against the previous lesson, or compare any two lessons (e.g. base GPT vs MoE).
@@ -45,6 +50,53 @@ It is a static site with no backend, so it hosts on GitHub Pages.
 | 25 ↳ | Mixture of Experts | top-k router, load-balancing loss |
 | 26 ↳ | Muon | Newton–Schulz orthogonalized updates |
 | 27 ↳ | Gradient clipping | global-norm clipping |
+| 28 ↳ | Sliding-window attention | banded mask, local + global layers |
+| 29 ↳ | QK-norm | RMSNorm on queries and keys, bounded attention logits |
+| 30 ↳ | Attention sinks | learned sink logit, softmax off by one |
+| 31 ↳ | Multi-head latent attention | low-rank K/V latent, 8x smaller KV cache |
+| 32 ↳ | Differential attention | difference of two softmax maps |
+| 33 ↳ | Linear attention | decayed linear attention, run as an RNN with a fixed-size state |
+| 34 ↳ | Weight tying | `lm_head = wteᵀ` |
+| 35 ↳ | LayerNorm, GELU, post-norm | the 2017/GPT-2 choices vs the modern ones |
+| 36 ↳ | Logit soft-capping | `cap·tanh(x/cap)` on attention and output logits |
+| 37 ↳ | Multi-token prediction | an extra head for token t+2, a free speculative draft |
+| 38 ↳ | DeepSeekMoE | fine-grained + shared experts, aux-loss-free bias balancing (branches off 25) |
+
+**Part 3 · Training like the pros** (NumPy, branches off lesson 21)
+
+| # | Lesson | Adds |
+|---|---|---|
+| 40 | **Train/validation split** | held-out names, val loss, overfitting, bits per character |
+| 41 ↳ | Dropout | train/eval modes, regularization on scarce data |
+| 42 ↳ | WSD schedule | warmup–stable–decay vs cosine, linear, constant |
+| 43 ↳ | Gradient accumulation | micro-batches, same gradient as one big batch |
+| 44 ↳ | Mixed precision | simulated bf16/fp16, master weights, loss scaling |
+| 45 ↳ | Initialization and μP | fan-in / GPT-2 init, learning-rate transfer across widths |
+| 46 ↳ | z-loss and label smoothing | keeping the output layer in check |
+| 47 ↳ | Optimizer zoo | Lion, Adafactor, SGD vs Adam, optimizer memory |
+| 48 ↳ | Byte-pair encoding | a learned subword tokenizer, fair comparison in bits per character |
+
+**Part 4 · Beyond pretraining** (every lesson starts from a cached pretrained checkpoint)
+
+| # | Lesson | Adds |
+|---|---|---|
+| 50 | **Checkpoints** | save/load weights + optimizer state, resume after a crash, reuse a base model |
+| 51 ↳ | Supervised fine-tuning | a new special token, loss masking, catastrophic forgetting |
+| 52 ↳ | LoRA | frozen base, low-rank adapters, detach and merge |
+| 53 ↳ | Quantization | int8/int4/int2, per-tensor vs group-wise scales, outliers |
+| 54 ↳ | QLoRA | NF4 4-bit base + LoRA (branches off 52) |
+| 55 ↳ | Knowledge distillation | a 6x smaller student learns from soft targets |
+| 56 ↳ | DPO | preference pairs, frozen reference, β, reward hacking |
+| 57 ↳ | GRPO | RL with verifiable rewards: group advantages, PPO clipping, KL |
+
+**Part 5 · Inference** (NumPy, branches off lesson 21)
+
+| # | Lesson | Adds |
+|---|---|---|
+| 60 | **KV cache** | incremental decoding, O(T) instead of O(T²) |
+| 61 ↳ | Decoding strategies | greedy, min-p, beam search, repetition penalty |
+| 62 ↳ | Speculative decoding | n-gram draft, one-pass verification, lossless rejection sampling |
+| 63 ↳ | Constrained decoding | token masks that guarantee a format (JSON mode) |
 
 See [ROADMAP.md](ROADMAP.md) for what's next and [CONTRIBUTING.md](CONTRIBUTING.md) to add a lesson.
 
@@ -54,7 +106,7 @@ See [ROADMAP.md](ROADMAP.md) for what's next and [CONTRIBUTING.md](CONTRIBUTING.
 pip install -r requirements-dev.txt   # numpy + pytest; the site itself needs nothing
 python tools/build.py                 # site/ + course/ -> dist/ (with course.json)
 python -m http.server -d dist 8000    # open http://localhost:8000
-pytest -q                             # every lesson runs, knobs parse, tree is valid
+pytest -q                             # every lesson runs, knobs parse, tree is valid (~2 minutes)
 ```
 
 Every lesson is also a plain script: `cd /tmp && python /path/to/course/part1-scratch/10-microgpt/code.py`.

@@ -1,0 +1,35 @@
+title = "GRPO: RL with verifiable rewards"
+parent = "50-checkpoints"
+variant = true
+summary = "The model samples groups of answers, a program scores them, and each answer is reinforced by how much it beat its group: group-relative advantages, PPO clipping and a KL penalty, the recipe behind reasoning models."
+tags = ["grpo", "reinforcement learning", "rlvr", "ppo", "reasoning", "post-training"]
+updated = 2026-10-14
+
+[[references]]
+title = "DeepSeekMath: Pushing the Limits of Mathematical Reasoning (introduces GRPO, Shao et al., 2024)"
+url = "https://arxiv.org/abs/2402.03300"
+[[references]]
+title = "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning (2025)"
+url = "https://arxiv.org/abs/2501.12948"
+[[references]]
+title = "Proximal Policy Optimization Algorithms (Schulman et al., 2017)"
+url = "https://arxiv.org/abs/1707.06347"
+[[references]]
+title = "DAPO: an open-source LLM RL system at scale (clip-higher, token-level loss, dynamic sampling)"
+url = "https://arxiv.org/abs/2503.14476"
+[[references]]
+title = "Approximating KL divergence (John Schulman): the k3 estimator"
+url = "http://joschu.net/blog/kl-approx.html"
+
+[[experiments]]
+name = "Hold on to the reference"
+description = "kl_coef = 0.5: reward stops around 0.8, but the samples stay much more name-like."
+params = { kl_coef = 0.5 }
+[[experiments]]
+name = "A hard reward"
+description = "'same first and last letter': only ~2% of samples score at the start, so most groups are all-zero and teach nothing. Bigger groups and more steps help, and then the model hacks it with 'ahaha'."
+params = { task = "same first and last letter", rl_learning_rate = 0.003, num_steps = 300, group_size = 16 }
+[[experiments]]
+name = "An easy reward"
+description = "'exactly 6 letters' is solved in about a dozen steps."
+params = { task = "exactly 6 letters" }

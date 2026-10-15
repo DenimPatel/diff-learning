@@ -1,0 +1,32 @@
+title = "DeepSeekMoE: fine-grained, shared experts and bias balancing"
+parent = "25-mixture-of-experts"
+variant = true
+summary = "The MoE recipe of DeepSeek-V3 and most 2025–26 open MoEs: many small experts, an always-on shared expert, sigmoid routing, and load balancing by nudging a per-expert bias instead of adding an auxiliary loss."
+tags = ["moe", "deepseek", "load balancing", "routing", "sparsity"]
+updated = 2026-10-14
+
+[[references]]
+title = "DeepSeekMoE: Towards Ultimate Expert Specialization (Dai et al., 2024)"
+url = "https://arxiv.org/abs/2401.06066"
+[[references]]
+title = "Auxiliary-Loss-Free Load Balancing Strategy for Mixture-of-Experts (Wang et al., 2024)"
+url = "https://arxiv.org/abs/2408.15664"
+[[references]]
+title = "DeepSeek-V3 Technical Report (2024)"
+url = "https://arxiv.org/abs/2412.19437"
+[[references]]
+title = "Qwen3 Technical Report (2025): fine-grained MoE without shared experts"
+url = "https://arxiv.org/abs/2505.09388"
+
+[[experiments]]
+name = "No balancing"
+description = "balancing = none: 'busiest' climbs to ~0.28 while 1/8 = 0.125 would be even."
+params = { balancing = "none" }
+[[experiments]]
+name = "Classic aux loss"
+description = "The Switch-style auxiliary loss of lesson 25 balances just as well, but its gradient also pulls on the language-modeling objective."
+params = { balancing = "aux-loss" }
+[[experiments]]
+name = "No shared expert"
+description = "n_shared = 0, the Qwen3 choice: only routed experts."
+params = { n_shared = 0 }

@@ -1,0 +1,25 @@
+title = "Gradient accumulation"
+parent = "40-evaluation"
+variant = true
+summary = "Train with a batch too big for memory: run several small micro-batches, add up their gradients, then take one optimizer step. The update is the same as for the big batch, up to rounding."
+tags = ["training", "batch size", "memory"]
+updated = 2026-10-14
+
+[[references]]
+title = "Hugging Face: Methods and tools for efficient training on a single GPU (gradient accumulation)"
+url = "https://huggingface.co/docs/transformers/perf_train_gpu_one"
+[[references]]
+title = "An Empirical Model of Large-Batch Training (critical batch size, McCandlish et al., 2018)"
+url = "https://arxiv.org/abs/1812.06162"
+[[references]]
+title = "nanoGPT train.py: gradient_accumulation_steps"
+url = "https://github.com/karpathy/nanoGPT/blob/master/train.py"
+
+[[experiments]]
+name = "No accumulation"
+description = "accum_steps = 1: one batch of 32. The curve is identical to the default, because the random windows and the gradients are the same."
+params = { accum_steps = 1 }
+[[experiments]]
+name = "Batch 128 from micro-batches of 8"
+description = "16 micro-batches per step: a 4x bigger effective batch with the memory of 8 sequences. Smoother curve and a lower val loss after 300 steps (at 4x the compute)."
+params = { batch_size = 128, accum_steps = 16 }

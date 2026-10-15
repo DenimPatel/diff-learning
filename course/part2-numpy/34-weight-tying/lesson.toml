@@ -1,0 +1,25 @@
+title = "Weight tying"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Use the token embedding table as the output layer too (lm_head = wteᵀ). One matrix instead of two, a big saving when the vocabulary is large, and the same table now learns from both ends of the network."
+tags = ["embeddings", "parameter sharing", "architecture"]
+updated = 2026-10-14
+
+[[references]]
+title = "Using the Output Embedding to Improve Language Models (Press & Wolf, 2016)"
+url = "https://arxiv.org/abs/1608.05859"
+[[references]]
+title = "Tying Word Vectors and Word Classifiers (Inan et al., 2016)"
+url = "https://arxiv.org/abs/1611.01462"
+[[references]]
+title = "Language Models are Unsupervised Multitask Learners (GPT-2, 2019): tied embeddings"
+url = "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
+
+[[experiments]]
+name = "Untied"
+description = "tie_weights = false is lesson 21: a separate lm_head."
+params = { tie_weights = false }
+[[experiments]]
+name = "Tiny and tied"
+description = "n_embd = 8: with so few dimensions, one table has to serve both jobs. Compare with the same size untied."
+params = { n_embd = 8 }

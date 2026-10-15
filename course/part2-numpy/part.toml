@@ -1,2 +1,2 @@
 title = "Part 2 · Tensors & modern variants"
-summary = "The same GPT on NumPy arrays: one small tensor autograd and a batched model that trains in seconds. Branches off it add the pieces used in current LLMs: RoPE, GQA, SwiGLU, mixture of experts, Muon and gradient clipping."
+summary = "The same GPT on NumPy arrays: one small tensor autograd and a batched model that trains in seconds. Branches off it add the architecture of current LLMs: RoPE, GQA, MLA, sliding windows, QK-norm, attention sinks, SwiGLU, mixture of experts (including DeepSeekMoE), linear attention, multi-token prediction, Muon and more."

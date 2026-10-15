@@ -1,0 +1,32 @@
+title = "Knowledge distillation"
+parent = "50-checkpoints"
+variant = true
+summary = "Train a 6x smaller student on the teacher's full next-token distribution instead of the one correct answer. The student ends up better than the same student trained on the data alone."
+tags = ["distillation", "compression", "soft targets"]
+updated = 2026-10-14
+
+[[references]]
+title = "Distilling the Knowledge in a Neural Network (Hinton, Vinyals & Dean, 2015)"
+url = "https://arxiv.org/abs/1503.02531"
+[[references]]
+title = "DistilBERT (Sanh et al., 2019)"
+url = "https://arxiv.org/abs/1910.01108"
+[[references]]
+title = "Gemma 2: student models trained by distillation from a larger teacher (2024)"
+url = "https://arxiv.org/abs/2408.00118"
+[[references]]
+title = "On-Policy Distillation of Language Models (GKD, Agarwal et al., 2023)"
+url = "https://arxiv.org/abs/2306.13649"
+
+[[experiments]]
+name = "No teacher"
+description = "distill_alpha = 0 trains the same student on the data only. Overlay it on the default run: its val loss ends higher."
+params = { distill_alpha = 0.0 }
+[[experiments]]
+name = "Temperature 1"
+description = "No softening. On this tiny vocabulary it does about as well as T = 2."
+params = { distill_temp = 1.0 }
+[[experiments]]
+name = "Tiny student"
+description = "student_embd = 8: about 1,500 parameters. How close can it get to the teacher?"
+params = { student_embd = 8 }

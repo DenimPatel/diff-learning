@@ -1,0 +1,32 @@
+title = "Sliding-window attention"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Each position attends only to the last `window` positions: a banded causal mask. Cost and KV cache stop growing with context, depth extends the reach, and an occasional global layer restores it."
+tags = ["attention", "long context", "kv cache", "local attention"]
+updated = 2026-10-14
+
+[[references]]
+title = "Longformer: The Long-Document Transformer (Beltagy et al., 2020)"
+url = "https://arxiv.org/abs/2004.05150"
+[[references]]
+title = "Mistral 7B (2023): sliding-window attention with a rolling KV cache"
+url = "https://arxiv.org/abs/2310.06825"
+[[references]]
+title = "Gemma 3 Technical Report (2025): 5 local layers per global layer"
+url = "https://arxiv.org/abs/2503.19786"
+[[references]]
+title = "OlmPool (Ai2): how attention-efficiency choices interact"
+url = "https://allenai.org/blog/olmpool"
+
+[[experiments]]
+name = "Window 1"
+description = "Each position sees only itself: no attention at all, effectively a bigram model. The loss stays far higher."
+params = { window = 1 }
+[[experiments]]
+name = "Full window"
+description = "window = 16 = block_size: identical to lesson 21."
+params = { window = 16 }
+[[experiments]]
+name = "Local + global"
+description = "window 2, with every 2nd layer global: half the layers keep a tiny cache, and the model still sees the whole name."
+params = { window = 2, global_every = 2 }

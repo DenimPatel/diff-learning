@@ -1,0 +1,28 @@
+title = "Linear attention & state-space recurrence"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Drop the softmax and let attention fade with distance. The same layer then trains in parallel like a transformer and runs as an RNN with a fixed-size state, the idea behind RetNet, RWKV and Mamba-2."
+tags = ["linear attention", "ssm", "rnn", "mamba", "long context"]
+updated = 2026-10-14
+
+[[references]]
+title = "Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention (Katharopoulos et al., 2020)"
+url = "https://arxiv.org/abs/2006.16236"
+[[references]]
+title = "Retentive Network: A Successor to Transformer for LLMs (RetNet, Sun et al., 2023)"
+url = "https://arxiv.org/abs/2307.08621"
+[[references]]
+title = "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (Mamba-2, Dao & Gu, 2024)"
+url = "https://arxiv.org/abs/2405.21060"
+[[references]]
+title = "Gated Delta Networks (Yang et al., 2024), used in Qwen3-Next"
+url = "https://arxiv.org/abs/2412.06464"
+
+[[experiments]]
+name = "Short memory"
+description = "same_decay = 0.1: every head forgets almost immediately. Effectively a bigram model again."
+params = { same_decay = 0.1 }
+[[experiments]]
+name = "No decay"
+description = "same_decay = 1: plain linear attention. Old tokens never fade, and quality drops: the decay is doing real work."
+params = { same_decay = 1 }

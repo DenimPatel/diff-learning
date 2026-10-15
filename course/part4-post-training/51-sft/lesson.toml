@@ -1,0 +1,32 @@
+title = "Supervised fine-tuning (SFT)"
+parent = "50-checkpoints"
+variant = true
+summary = "Teach the pretrained model a task from prompt → response examples: a new separator token, a loss masked to the response, and a first look at catastrophic forgetting."
+tags = ["fine-tuning", "sft", "instruction tuning", "post-training"]
+updated = 2026-10-14
+
+[[references]]
+title = "Training language models to follow instructions with human feedback (InstructGPT, Ouyang et al., 2022)"
+url = "https://arxiv.org/abs/2203.02155"
+[[references]]
+title = "Finetuned Language Models Are Zero-Shot Learners (FLAN, Wei et al., 2021)"
+url = "https://arxiv.org/abs/2109.01652"
+[[references]]
+title = "LIMA: Less Is More for Alignment (Zhou et al., 2023)"
+url = "https://arxiv.org/abs/2305.11206"
+[[references]]
+title = "Hugging Face TRL: SFTTrainer and completion-only loss"
+url = "https://huggingface.co/docs/trl/sft_trainer"
+
+[[experiments]]
+name = "Learn from the prompt too"
+description = "mask_prompt = false: the loss also counts the name before '='. Capacity goes to modeling the prompt, so acc rises more slowly, and from BOS the model now writes whole 'name=eman' examples by itself."
+params = { mask_prompt = false }
+[[experiments]]
+name = "Gentle fine-tune"
+description = "A 10x smaller learning rate: much less forgetting (names stays low), but the task is barely learned."
+params = { ft_learning_rate = 0.0003 }
+[[experiments]]
+name = "Train longer"
+description = "1000 steps: exact match climbs further, and the names loss shows how much it forgot."
+params = { num_steps = 1000 }

@@ -1,0 +1,28 @@
+title = "Checkpoints"
+parent = "40-evaluation"
+summary = "Save the weights and the optimizer state to a file, resume after a crash, and reuse a pretrained model instead of training it again. Every lesson in Part 4 starts from this checkpoint."
+tags = ["checkpoint", "resume", "pretraining"]
+updated = 2026-10-14
+
+[[references]]
+title = "numpy.savez: several arrays in one .npz file"
+url = "https://numpy.org/doc/stable/reference/generated/numpy.savez.html"
+[[references]]
+title = "PyTorch: saving and loading a general checkpoint for inference and/or resuming training"
+url = "https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html"
+[[references]]
+title = "safetensors: the format most open-weight models ship in"
+url = "https://huggingface.co/docs/safetensors/index"
+
+[[experiments]]
+name = "Crash at step 150"
+description = "The job 'dies' after 150 steps, past the save at 100. Run again with the default knobs: it resumes from step 100 and the curve continues from there."
+params = { stop_after = 150 }
+[[experiments]]
+name = "Save every step"
+description = "save_every = 1 loses nothing to a crash, but writing the file each step costs time. Real runs save every few hundred or thousand steps."
+params = { save_every = 1, stop_after = 150 }
+[[experiments]]
+name = "A different base"
+description = "Changing any setting in config gives a new file name, so this pretrains from scratch. Switch back and the old checkpoint loads instantly."
+params = { n_embd = 48 }

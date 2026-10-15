@@ -1,0 +1,2 @@
+title = "Part 3 · Training like the pros"
+summary = "Measure before you tune. Hold out a validation set, then try the tricks used in real training runs: dropout, WSD schedules, gradient accumulation, mixed precision, careful initialization and μP, z-loss, other optimizers and a BPE tokenizer."

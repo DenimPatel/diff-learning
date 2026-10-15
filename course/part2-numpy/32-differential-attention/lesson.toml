@@ -1,0 +1,22 @@
+title = "Differential attention"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Compute two attention maps per head and subtract one from the other, like a differential amplifier cancelling common-mode noise. Attention given to irrelevant tokens cancels out."
+tags = ["attention", "noise cancellation", "research"]
+updated = 2026-10-14
+
+[[references]]
+title = "Differential Transformer (Ye et al., 2024)"
+url = "https://arxiv.org/abs/2410.05258"
+[[references]]
+title = "Reference implementation (microsoft/unilm)"
+url = "https://github.com/microsoft/unilm/tree/master/Diff-Transformer"
+
+[[experiments]]
+name = "Two wide heads"
+description = "n_head = 2: each half-head is 8-dimensional instead of 2."
+params = { n_head = 2 }
+[[experiments]]
+name = "Bigger model"
+description = "n_embd 64, 3 layers: compare with lesson 21's 'Bigger model' experiment."
+params = { n_embd = 64, n_layer = 3 }

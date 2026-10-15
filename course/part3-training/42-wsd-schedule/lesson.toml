@@ -1,0 +1,32 @@
+title = "WSD schedule"
+parent = "40-evaluation"
+variant = true
+summary = "Warmup, hold the peak learning rate, then cool down sharply at the end. Compare it with linear, cosine and constant schedules, and see why the loss drops so suddenly during the cooldown."
+tags = ["learning rate", "schedule", "wsd", "training"]
+updated = 2026-10-14
+
+[[references]]
+title = "MiniCPM: Unveiling the Potential of Small Language Models (WSD schedule, Hu et al., 2024)"
+url = "https://arxiv.org/abs/2404.06395"
+[[references]]
+title = "Scaling Laws and Compute-Optimal Training Beyond Fixed Training Durations (Hägele et al., 2024)"
+url = "https://arxiv.org/abs/2405.18392"
+[[references]]
+title = "Understanding Warmup-Stable-Decay Learning Rates: A River Valley Loss Landscape Perspective (Wen et al., 2024)"
+url = "https://arxiv.org/abs/2410.05192"
+[[references]]
+title = "SGDR: Stochastic Gradient Descent with Warm Restarts (cosine schedule, Loshchilov & Hutter, 2016)"
+url = "https://arxiv.org/abs/1608.03983"
+
+[[experiments]]
+name = "Cosine"
+description = "The long-time default (lesson 11): a smooth decay over the whole run."
+params = { schedule = "cosine" }
+[[experiments]]
+name = "Constant"
+description = "No decay at all: val stays on the plateau. The final cooldown is worth a lot."
+params = { schedule = "constant" }
+[[experiments]]
+name = "Very short cooldown"
+description = "decay_fraction = 0.05: only the last 15 steps decay. Most of the benefit still arrives."
+params = { decay_fraction = 0.05 }

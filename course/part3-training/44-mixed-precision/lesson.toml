@@ -1,0 +1,36 @@
+title = "Mixed precision"
+parent = "40-evaluation"
+variant = true
+summary = "Simulate bf16 and fp16 training in NumPy: round every activation and gradient to 16 bits, keep full-precision master weights for the update, and use loss scaling for fp16's narrow range."
+tags = ["mixed precision", "bf16", "fp16", "numerics", "training"]
+updated = 2026-10-14
+
+[[references]]
+title = "Mixed Precision Training (Micikevicius et al., 2017): fp32 master weights and loss scaling"
+url = "https://arxiv.org/abs/1710.03740"
+[[references]]
+title = "A Study of BFLOAT16 for Deep Learning Training (Kalamkar et al., 2019)"
+url = "https://arxiv.org/abs/1905.12322"
+[[references]]
+title = "FP8 Formats for Deep Learning (Micikevicius et al., 2022)"
+url = "https://arxiv.org/abs/2209.05433"
+[[references]]
+title = "DeepSeek-V3 Technical Report (2024): FP8 training at scale"
+url = "https://arxiv.org/abs/2412.19437"
+
+[[experiments]]
+name = "Full precision"
+description = "precision = fp64: the reference. bf16 ends within noise of it."
+params = { precision = "fp64" }
+[[experiments]]
+name = "No master weights, small LR"
+description = "Weights stored in bf16 and learning rate 0.0003: many updates are smaller than the gap between neighboring bf16 numbers and are lost. Compare with the next experiment."
+params = { master_weights = false, learning_rate = 0.0003 }
+[[experiments]]
+name = "Master weights, small LR"
+description = "The same, with full-precision master weights: every small update counts, and the loss ends clearly lower."
+params = { learning_rate = 0.0003 }
+[[experiments]]
+name = "fp16 with loss scaling"
+description = "fp16 has more precision than bf16 but a tiny range. Scaling the loss by 1024 moves small gradients away from the underflow region."
+params = { precision = "fp16", loss_scale = 1024 }

@@ -1,0 +1,32 @@
+title = "DPO: learning from preferences"
+parent = "50-checkpoints"
+variant = true
+summary = "Align the model to what people prefer from (chosen, rejected) pairs, with no reward model and no RL: the DPO loss, a frozen reference model, β, and a reward-hacking demo."
+tags = ["dpo", "preference optimization", "alignment", "rlhf", "post-training"]
+updated = 2026-10-14
+
+[[references]]
+title = "Direct Preference Optimization: Your Language Model is Secretly a Reward Model (Rafailov et al., 2023)"
+url = "https://arxiv.org/abs/2305.18290"
+[[references]]
+title = "Training language models to follow instructions with human feedback (InstructGPT / RLHF, 2022)"
+url = "https://arxiv.org/abs/2203.02155"
+[[references]]
+title = "Hugging Face TRL: DPOTrainer"
+url = "https://huggingface.co/docs/trl/dpo_trainer"
+[[references]]
+title = "RLHF Book (Nathan Lambert): direct alignment algorithms"
+url = "https://rlhfbook.com/"
+
+[[experiments]]
+name = "Reward hacking"
+description = "Prefer short names with a 3x higher learning rate. Within 25 steps every sample is 'liked', because the model now writes one-letter names. It satisfied the preference and lost everything else."
+params = { preference = "short", dpo_learning_rate = 0.001 }
+[[experiments]]
+name = "Stronger anchor"
+description = "dpo_beta = 0.5 keeps the model closer to the reference: 'liked' rises almost as fast while the names loss stays much lower."
+params = { dpo_beta = 0.5 }
+[[experiments]]
+name = "Starts with a vowel"
+description = "A preference about the first token. Is it easier or harder to learn?"
+params = { preference = "starts with a vowel" }

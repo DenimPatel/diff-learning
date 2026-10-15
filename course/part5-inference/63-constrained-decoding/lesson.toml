@@ -1,0 +1,28 @@
+title = "Constrained decoding"
+parent = "60-kv-cache"
+variant = true
+summary = "Guarantee the output format by masking every token that would break it before sampling. This is the mechanism behind JSON mode, structured outputs and grammar-constrained tool calls."
+tags = ["structured output", "json mode", "grammars", "inference", "decoding"]
+updated = 2026-10-14
+
+[[references]]
+title = "Efficient Guided Generation for Large Language Models (Outlines, Willard & Louf, 2023)"
+url = "https://arxiv.org/abs/2307.09702"
+[[references]]
+title = "XGrammar: Flexible and Efficient Structured Generation Engine (Dong et al., 2024)"
+url = "https://arxiv.org/abs/2411.15100"
+[[references]]
+title = "llama.cpp GBNF grammars"
+url = "https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md"
+[[references]]
+title = "Let Me Speak Freely? Format restrictions and LLM performance (Tam et al., 2024)"
+url = "https://arxiv.org/abs/2408.02442"
+
+[[experiments]]
+name = "A format the model never writes"
+description = "'zz?': 0 of 300 free samples fit, so rejection sampling would never finish. With the mask, every output fits."
+params = { template = "zz?" }
+[[experiments]]
+name = "Fixed first and last letter"
+description = "'k????a': about 1% of free samples fit. Look for awkward endings like 'keniaa', where the model wanted to stop but had to keep going."
+params = { template = "k????a" }

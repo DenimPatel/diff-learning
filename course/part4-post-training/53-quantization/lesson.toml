@@ -1,0 +1,35 @@
+title = "Quantization"
+parent = "50-checkpoints"
+variant = true
+summary = "Store weights as 8-, 4- or 2-bit integers with shared scales. Compare per-tensor, per-channel and group-wise scales, and see why one outlier channel breaks the naive version."
+tags = ["quantization", "int8", "int4", "inference", "compression"]
+updated = 2026-10-14
+
+[[references]]
+title = "LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale (Dettmers et al., 2022)"
+url = "https://arxiv.org/abs/2208.07339"
+[[references]]
+title = "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers (Frantar et al., 2022)"
+url = "https://arxiv.org/abs/2210.17323"
+[[references]]
+title = "AWQ: Activation-aware Weight Quantization (Lin et al., 2023)"
+url = "https://arxiv.org/abs/2306.00978"
+[[references]]
+title = "SmoothQuant: migrating difficulty between activations and weights (Xiao et al., 2022)"
+url = "https://arxiv.org/abs/2211.10438"
+[[references]]
+title = "A Visual Guide to Quantization (Maarten Grootendorst)"
+url = "https://newsletter.maartengrootendorst.com/p/a-visual-guide-to-quantization"
+
+[[experiments]]
+name = "Per-tensor"
+description = "One scale per matrix: still fine at 8 bits, noticeably worse at 3 and 2."
+params = { granularity = "tensor" }
+[[experiments]]
+name = "An outlier channel, per-tensor"
+description = "outlier_scale = 30 leaves the model's function unchanged but plants a few huge weights. With one scale per matrix, int4 is now clearly hurt."
+params = { granularity = "tensor", outlier_scale = 30 }
+[[experiments]]
+name = "An outlier channel, group-wise"
+description = "The same outlier with a scale per 16 weights: the outlier only affects its own group, and int4 is lossless again."
+params = { granularity = "group", outlier_scale = 30 }

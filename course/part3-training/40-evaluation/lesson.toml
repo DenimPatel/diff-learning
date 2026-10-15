@@ -1,0 +1,28 @@
+title = "Train/validation split"
+parent = "21-numpy-gpt"
+summary = "Hold out names the model never trains on. The validation loss is the number that tells you whether a change really helped."
+tags = ["evaluation", "overfitting", "generalization"]
+updated = 2026-10-14
+
+[[references]]
+title = "Deep Learning, ch. 5.2: capacity, overfitting and underfitting (Goodfellow et al.)"
+url = "https://www.deeplearningbook.org/contents/ml.html"
+[[references]]
+title = "A Recipe for Training Neural Networks (Karpathy, 2019)"
+url = "https://karpathy.github.io/2019/04/25/recipe/"
+[[references]]
+title = "Perplexity and bits per character (Hugging Face docs)"
+url = "https://huggingface.co/docs/transformers/perplexity"
+
+[[experiments]]
+name = "Memorize 90 names"
+description = "data_fraction = 0.003 with a wider model and 600 steps. Train loss goes toward 0 while val climbs past 8, and samples get copied from the training set."
+params = { data_fraction = 0.003, n_embd = 64, num_steps = 600 }
+[[experiments]]
+name = "10% of the data"
+description = "Less data, same model: a gap opens but stays small. Compare the final val with the full run."
+params = { data_fraction = 0.1, num_steps = 600 }
+[[experiments]]
+name = "Eval every step"
+description = "eval_interval = 1 gives a smooth val curve at the cost of a slower run."
+params = { eval_interval = 1, num_steps = 100 }

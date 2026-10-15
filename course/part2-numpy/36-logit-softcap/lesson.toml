@@ -1,0 +1,29 @@
+title = "Logit soft-capping"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Squash attention and output logits with cap·tanh(x/cap): they stay identical when small but can never exceed the cap. Gemma 2's guard against runaway logits, and what happens when the cap is too tight."
+tags = ["stability", "logits", "attention", "gemma"]
+updated = 2026-10-14
+
+[[references]]
+title = "Gemma 2: Improving Open Language Models at a Practical Size (2024): logit soft-capping"
+url = "https://arxiv.org/abs/2408.00118"
+[[references]]
+title = "Neural Combinatorial Optimization with Reinforcement Learning (Bello et al., 2016): tanh logit clipping"
+url = "https://arxiv.org/abs/1611.09940"
+[[references]]
+title = "Grok-1 open release (attention logit soft-capping at 30)"
+url = "https://github.com/xai-org/grok-1"
+
+[[experiments]]
+name = "No caps"
+description = "Both caps 0 is lesson 21. Watch max_logit: it rises without limit."
+params = { attn_softcap = 0.0, final_softcap = 0.0 }
+[[experiments]]
+name = "Output cap too tight"
+description = "final_softcap = 2: the model can never be more than e^4 ≈ 55x surer of one character than another, and the loss stalls higher."
+params = { final_softcap = 2.0 }
+[[experiments]]
+name = "Attention cap too tight"
+description = "attn_softcap = 1: attention can barely prefer any position, and is close to a uniform average."
+params = { attn_softcap = 1.0 }

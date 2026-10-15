@@ -27,6 +27,7 @@ This copies the parent's `code.py`, so the diff starts out empty. **Whatever you
   ```
   Options: `min`, `max`, `step`, `log: true` (log-scale slider), `options: [...]` (dropdown). Values must be `int`, `float`, `str` or `bool` literals.
 - Training lessons must have a `num_steps` knob and print `step N / TOTAL | loss X` lines (add any other `| name value` pairs to chart them). Keep the defaults quick in the browser: Part 2 runs about 300 steps in seconds.
+- Part 4 lessons branch off `50-checkpoints`. Its pretraining stage (`pretrain_steps`) is cached in a `ckpt_<hash>.npz` file named after the settings, so re-runs in the browser skip straight to the lesson's own stage. Print pretraining progress without a leading `step` (e.g. `pretrain 25 / 300 | …`) so that only the lesson's own loop is charted. If you add another step-count knob, add it to `QUICK` in `tests/test_course.py` so that the tests stay fast.
 
 ## 3. Write `lesson.toml`
 

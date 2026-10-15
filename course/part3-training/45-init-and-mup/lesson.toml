@@ -1,0 +1,32 @@
+title = "Initialization and μP"
+parent = "40-evaluation"
+variant = true
+summary = "Scale initial weights by 1/√fan_in, shrink residual projections with depth, and use μP so that the best learning rate found on a small model still works on a 4x wider one."
+tags = ["initialization", "mup", "hyperparameter transfer", "scaling", "training"]
+updated = 2026-10-14
+
+[[references]]
+title = "Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer (μP, Yang et al., 2022)"
+url = "https://arxiv.org/abs/2203.03466"
+[[references]]
+title = "Understanding the difficulty of training deep feedforward neural networks (Glorot & Bengio, 2010)"
+url = "http://proceedings.mlr.press/v9/glorot10a.html"
+[[references]]
+title = "Language Models are Unsupervised Multitask Learners (GPT-2, 2019): residual scaling 1/√N"
+url = "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
+[[references]]
+title = "The Practitioner's Guide to the Maximal Update Parameterization (EleutherAI & Cerebras, 2024)"
+url = "https://blog.eleuther.ai/mutransfer/"
+
+[[experiments]]
+name = "Wide, standard, LR 0.03"
+description = "n_embd 128 with the learning rate that was best at width 32: in standard parametrization it is now far too high (val ~2.58)."
+params = { n_embd = 128, learning_rate = 0.03, parametrization = "standard" }
+[[experiments]]
+name = "Wide, μP, LR 0.03"
+description = "The same width and learning rate under μP: it transfers, and the wider model beats the narrow one (val ~2.23)."
+params = { n_embd = 128, learning_rate = 0.03, parametrization = "mup" }
+[[experiments]]
+name = "Narrow, LR 0.03"
+description = "The base width with LR 0.03, for reference. Standard and μP are identical at the base width."
+params = { learning_rate = 0.03 }

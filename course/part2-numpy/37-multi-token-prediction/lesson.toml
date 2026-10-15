@@ -1,0 +1,29 @@
+title = "Multi-token prediction"
+parent = "21-numpy-gpt"
+variant = true
+summary = "Train an extra head to predict the token after next, from the same hidden state. A denser training signal, and at inference time the extra head is a free draft for speculative decoding."
+tags = ["mtp", "training objective", "speculative decoding", "deepseek"]
+updated = 2026-10-14
+
+[[references]]
+title = "Better & Faster Large Language Models via Multi-token Prediction (Gloeckle et al., 2024)"
+url = "https://arxiv.org/abs/2404.19737"
+[[references]]
+title = "DeepSeek-V3 Technical Report (2024): sequential MTP modules"
+url = "https://arxiv.org/abs/2412.19437"
+[[references]]
+title = "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads (Cai et al., 2024)"
+url = "https://arxiv.org/abs/2401.10774"
+
+[[experiments]]
+name = "No MTP loss"
+description = "mtp_weight = 0: the head is never trained, so its loss stays high and its guesses are almost never right. The main loss barely changes."
+params = { mtp_weight = 0.0 }
+[[experiments]]
+name = "Equal weight"
+description = "mtp_weight = 1: the trunk now serves both objectives equally."
+params = { mtp_weight = 1.0 }
+[[experiments]]
+name = "More samples"
+description = "50 names for a steadier estimate of how often the guess is right."
+params = { num_samples = 50 }

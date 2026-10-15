@@ -1,0 +1,28 @@
+title = "Byte-pair encoding (BPE)"
+parent = "40-evaluation"
+variant = true
+summary = "Learn a tokenizer from the data: start from characters and repeatedly merge the most frequent adjacent pair. Fewer tokens per name, a longer effective context, and a lower loss per character."
+tags = ["tokenization", "bpe", "data"]
+updated = 2026-10-14
+
+[[references]]
+title = "Neural Machine Translation of Rare Words with Subword Units (BPE for NLP, Sennrich et al., 2015)"
+url = "https://arxiv.org/abs/1508.07909"
+[[references]]
+title = "Let's build the GPT Tokenizer (Karpathy, 2024) and minbpe"
+url = "https://github.com/karpathy/minbpe"
+[[references]]
+title = "tiktoken: OpenAI's BPE tokenizer"
+url = "https://github.com/openai/tiktoken"
+[[references]]
+title = "Byte Latent Transformer: Patches Scale Better Than Tokens (Pagnoni et al., 2024)"
+url = "https://arxiv.org/abs/2412.09871"
+
+[[experiments]]
+name = "No merges"
+description = "num_merges = 0 is the character tokenizer of lesson 40: 1 character per token."
+params = { num_merges = 0 }
+[[experiments]]
+name = "150 merges"
+description = "A bigger vocabulary: 1.6 characters per token and a lower val_bpc. Per-token loss goes *up*, because each token now carries more information."
+params = { num_merges = 150 }
